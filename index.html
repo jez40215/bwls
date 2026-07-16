@@ -1393,21 +1393,163 @@
         const item = localRatesArray.find(r => r.id === recordId);
         if (!item) return;
 
-        const currencySign = currentWorkflowFilter === "Local" ? "₱" : "$";
         const body = document.getElementById("detailModalBody");
+
+        // Build dynamically populated selections for Origins
+        let originOptionsHtml = `<option value="" disabled>Select Origin</option>`;
+        localOriginsArray.forEach(o => {
+            const isSelected = o.origin_name === item.origin ? "selected" : "";
+            originOptionsHtml += `<option value="${o.origin_name}" ${isSelected}>${o.origin_name}</option>`;
+        });
+
+        // Build dynamically populated selections for Destinations
+        let destOptionsHtml = `<option value="" disabled>Select Destination</option>`;
+        localDestinationsArray.forEach(d => {
+            const isSelected = d.port_name === item.destination_name ? "selected" : "";
+            destOptionsHtml += `<option value="${d.port_name}" ${isSelected}>${d.port_name}</option>`;
+        });
+
+        // Build dynamically populated selections for Carriers
+        let carrierOptionsHtml = "";
+        const combinedCarriers = [...defaultCarriers, ...localCarriersArray];
+        combinedCarriers.forEach(c => {
+            const isSelected = c.carrier_name === item.carrier_name ? "selected" : "";
+            carrierOptionsHtml += `<option value="${c.carrier_name}" ${isSelected}>${c.carrier_name}</option>`;
+        });
+
         body.innerHTML = `
-            <div class="detail-row"><strong>Origin Port Location:</strong> <span>${formatDisplayValue(item.origin)}</span></div>
-            <div class="detail-row"><strong>Destination Target Port:</strong> <span>${formatDisplayValue(item.destination_name)}</span></div>
-            <div class="detail-row"><strong>Container Size Specification:</strong> <span>${formatDisplayValue(item.container_size)}</span></div>
-            <div class="detail-row"><strong>Direction Class:</strong> <span>${formatDisplayValue(item.shipment_type)} Mode</span></div>
-            <div class="detail-row"><strong>Transit Duration Days:</strong> <span>${item.transit_time ? item.transit_time + ' Days' : '-'}</span></div>
-            <div class="detail-row"><strong>Assigned Operator Editor:</strong> <span>${formatDisplayValue(item.person_modified)}</span></div>
-            <div class="detail-row"><strong>Validity Effective Start:</strong> <span>${formatDisplayValue(item.valid_from)}</span></div>
-            <div class="detail-row"><strong>Validity Expiration Target:</strong> <span>${formatDisplayValue(item.valid_to)}</span></div>
-            <div class="detail-row"><strong>Target Core Carrier Line:</strong> <span>${formatDisplayValue(item.carrier_name)}</span></div>
-            <div class="detail-row"><strong>Base Direct Quotation Rate Amount:</strong> <span style="color: #d11252; font-weight: bold;">${currencySign}${formatDisplayValue(item.freight_rate)}</span></div>
+            <div class="form-group-row">
+                <div class="form-field">
+                    <label>Origin Port Location</label>
+                    <select id="editRateOrigin">${originOptionsHtml}</select>
+                </div>
+                <div class="form-field">
+                    <label>Destination Target Port</label>
+                    <select id="editRateDestination">${destOptionsHtml}</select>
+                </div>
+            </div>
+            <div class="form-group-row">
+                <div class="form-field">
+                    <label>Container Size Specification</label>
+                    <select id="editRateContainerSize">
+                        <option value="20STD" ${item.container_size === '20STD' ? 'selected' : ''}>20ft Standard (20STD)</option>
+                        <option value="40STD" ${item.container_size === '40STD' ? 'selected' : ''}>40ft Standard (40STD)</option>
+                        <option value="40HQ" ${item.container_size === '40HQ' ? 'selected' : ''}>40ft High Cube (40HQ)</option>
+                        <option value="Reefer 20STD" ${item.container_size === 'Reefer 20STD' ? 'selected' : ''}>Reefer 20ft Standard (Reefer 20STD)</option>
+                        <option value="Reefer 40STD" ${item.container_size === 'Reefer 40STD' ? 'selected' : ''}>Reefer 40ft Standard (Reefer 40STD)</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label>Direction Class</label>
+                    <select id="editRateShipmentType">
+                        <option value="Export" ${item.shipment_type === 'Export' ? 'selected' : ''}>Export Mode</option>
+                        <option value="Import" ${item.shipment_type === 'Import' ? 'selected' : ''}>Import Mode</option>
+                        <option value="Local" ${item.shipment_type === 'Local' ? 'selected' : ''}>Local Mode</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group-row">
+                <div class="form-field">
+                    <label>Transit Duration Days</label>
+                    <input type="number" id="editRateTransitTime" value="${item.transit_time || 0}">
+                </div>
+                <div class="form-field">
+                    <label>Assigned Operator Editor</label>
+                    <input type="text" id="editRatePersonModified" value="${formatDisplayValue(item.person_modified)}" readonly disabled>
+                </div>
+            </div>
+            <div class="form-group-row">
+                <div class="form-field">
+                    <label>Validity Effective Start</label>
+                    <input type="date" id="editRateValidityStart" value="${item.valid_from || ''}">
+                </div>
+                <div class="form-field">
+                    <label>Validity Expiration Target</label>
+                    <input type="date" id="editRateValidityEnd" value="${item.valid_to || ''}">
+                </div>
+            </div>
+            <hr style="border:0; border-top:1px solid #e2e8f0; margin: 5px 0;">
+            <div class="form-group-row">
+                <div class="form-field">
+                    <label>Target Core Carrier Line</label>
+                    <select id="editRateCarrier">${carrierOptionsHtml}</select>
+                </div>
+                <div class="form-field">
+                    <label>Base Direct Quotation Rate Amount</label>
+                    <input type="number" id="editRatePrice" value="${item.freight_rate || 0}">
+                </div>
+            </div>
         `;
+
+        // Inject dynamic action buttons to support full edit updates and deletes
+        const modalFooter = document.querySelector("#viewRateDetailModal .modal-footer");
+        if (modalFooter) {
+            modalFooter.innerHTML = `
+                <button class="delete-btn" style="padding: 10px 18px; font-weight: 600; margin-right: auto;" onclick="executeDeleteRateAction('${recordId}')">Delete Rate</button>
+                <button class="cancel-btn" onclick="closeModal('viewRateDetailModal')">Cancel</button>
+                <button class="save-btn" onclick="executeEditRateAction('${recordId}')">Save Changes</button>
+            `;
+        }
+
         showModal("viewRateDetailModal");
+    }
+
+    function executeEditRateAction(recordId) {
+        const orig = document.getElementById("editRateOrigin").value;
+        const dest = document.getElementById("editRateDestination").value;
+        const size = document.getElementById("editRateContainerSize").value;
+        const type = document.getElementById("editRateShipmentType").value;
+        const transit = parseInt(document.getElementById("editRateTransitTime").value) || 0;
+        const vStart = document.getElementById("editRateValidityStart").value;
+        const vEnd = document.getElementById("editRateValidityEnd").value;
+        const carrierSelect = document.getElementById("editRateCarrier");
+        const carrierName = carrierSelect.options[carrierSelect.selectedIndex].text;
+        const rateVal = parseFloat(document.getElementById("editRatePrice").value) || 0;
+        const operator = (currentLoggedInUser && currentLoggedInUser.fullName) || "System Agent";
+
+        if (!orig || !dest) {
+            alert("Please select both origin and destination ports.");
+            return;
+        }
+        if (!vStart || !vEnd) {
+            alert("Please input both start and end validity dates.");
+            return;
+        }
+
+        const payload = {
+            origin: orig,                                  
+            destination_name: dest,                        
+            container_size: size,                          
+            shipment_type: type,                           
+            transit_time: transit,                         
+            person_modified: operator,   
+            valid_from: vStart,                            
+            valid_to: vEnd,                                
+            carrier_name: carrierName,                     
+            freight_rate: rateVal                          
+        };
+
+        database.ref(`rates/${recordId}`).update(payload)
+        .then(() => {
+            closeModal('viewRateDetailModal');
+            alert("Rates Entry updated successfully!");
+        })
+        .catch((error) => {
+            console.error("Firebase update error: ", error);
+        });
+    }
+
+    function executeDeleteRateAction(recordId) {
+        if (confirm("Are you sure you want to permanently delete this rate entry?")) {
+            database.ref(`rates/${recordId}`).remove()
+            .then(() => {
+                closeModal('viewRateDetailModal');
+                alert("Rates Entry deleted successfully!");
+            })
+            .catch((error) => {
+                console.error("Firebase delete error: ", error);
+            });
+        }
     }
 
     function renderRates(ratesData = localRatesArray) {
