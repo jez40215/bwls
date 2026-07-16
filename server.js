@@ -3,13 +3,12 @@ const { initializeApp, cert } = require("firebase-admin/app");
 const { getDatabase } = require("firebase-admin/database");
 
 // Load the downloaded credential key file
-const serviceAccount = require("./serviceAccountKey.json");
-
-const app = express();
-
-// Initialize the Firebase Admin App securely using your certificate file
 initializeApp({
-    credential: cert(serviceAccount),
+    credential: cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n")
+    }),
     databaseURL: "https://logistic-app-9bd36-default-rtdb.asia-southeast1.firebasedatabase.app"
 });
 
