@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logistic App Dashboard</title>
+    <!-- ADDED: Chart.js for the Rates Comparison Graph -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Modernized General Reset & Layout */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body, html { height: 100%; width: 100%; background-color: #f4f6f9; color: #333; overflow: hidden; }
+
+        /* Login Screen */
+        #loginPage { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; width: 100vw; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); }
+        .login-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); width: 100%; max-width: 400px; text-align: center; }
+        .login-card h2 { margin-bottom: 24px; color: #1e3c72; font-weight: 600; }
+        .login-card input { width: 100%; padding: 12px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+        .login-card button { width: 100%; padding: 12px; background-color: #007bff; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; font-size: 16px; transition: background 0.2s; }
+        .login-card button:hover { background-color: #0056b3; }
+        #loginError { color: #d9534f; font-size: 14px; margin-bottom: 12px; display: none; font-weight: 500; }
+
+        /* Main Workspace Wrapper */
+        #appContent { display: flex; height: 100vh; width: 100vw; }
+
+        /* Sidebar Design */
+        .sidebar { width: 260px; background-color: #1e293b; color: #f8fafc; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; flex-shrink: 0; transition: transform 0.3s ease; }
+        .sidebar-brand { font-size: 20px; font-weight: bold; margin-bottom: 30px; border-bottom: 1px solid #334155; padding-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .sidebar-menu { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+        .sidebar-menu li { padding: 12px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; transition: background 0.2s; display: flex; align-items: center; gap: 12px; }
+        .sidebar-menu li:hover { background-color: #334155; }
+        .sidebar-footer { border-top: 1px solid #334155; padding-top: 15px; }
+        #sidebarUser { font-weight: bold; margin-bottom: 10px; font-size: 14px; color: #cbd5e1; }
+        .logout-btn { width: 100%; padding: 10px; background-color: #ef4444; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        .logout-btn:hover { background-color: #dc2626; }
+
+        /* Main Dashboard View Window */
+        .main-view { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; width: 100%; }
+        
+        /* Top Navigation Header */
+        .top-navbar { height: auto; min-height: 65px; background-color: white; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: flex-start; padding: 10px 30px; gap: 12px; flex-wrap: wrap; }
+        .nav-dropdown { position: relative; }
+        .nav-dropdown-btn { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; font-size: 14px; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+        .nav-dropdown-btn:hover { background: #e2e8f0; }
+        .dropdown-menu { display: none; position: absolute; top: 110%; left: 0; background: white; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 100; min-width: 180px; list-style: none; }
+        .dropdown-menu li { padding: 10px 16px; cursor: pointer; font-size: 14px; }
+        .dropdown-menu li:hover { background: #f1f5f9; }
+        .show-menu { display: block !important; }
+
+        /* Document Body Container Space */
+        .page-container { flex-grow: 1; padding: 30px; overflow-y: auto; }
+        .page-view { display: none; }
+
+        /* Interactive Tables */
+        .table-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+        .action-btn { padding: 10px 20px; background-color: #10b981; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; font-size: 14px; }
+        .action-btn:hover { background-color: #059669; }
+        .filter-btn { padding: 10px 20px; background-color: #64748b; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; font-size: 14px; margin-right: 10px; }
+        .filter-btn:hover { background-color: #475569; }
+        
+        .data-table-wrapper { background: white; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow-x: auto; width: 100%; -webkit-overflow-scrolling: touch; }
+        .data-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .data-table th, .data-table td { padding: 14px 18px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+        
+        /* Updated Table Header Style to prevent column jamming */
+        .data-table th { 
+            background-color: #f8fafc; 
+            font-weight: 600; 
+            color: #475569; 
+            text-transform: uppercase; 
+            font-size: 12px; 
+            letter-spacing: 0.5px;
+            min-width: 160px;
+            white-space: nowrap;
+        }
+        
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background-color: #f8fafc; }
+
+        /* Dual Column Split inside table cell */
+        .rate-split { display: flex; justify-content: space-between; gap: 10px; font-variant-numeric: tabular-nums; }
+        .rate-split span { width: 48%; display: inline-flex; align-items: center; justify-content: space-between; gap: 4px; }
+        .rate-split span:first-child { text-align: left; }
+        .rate-split span:last-child { text-align: right; justify-content: flex-end; }
+
+        /* Eye Icon Layout in Cells */
+        .view-details-eye { cursor: pointer; font-size: 11px; padding: 2px 4px; border-radius: 4px; transition: background 0.2s; display: inline-flex; align-items: center; justify-content: center; margin-left: 2px; }
+        .view-details-eye:hover { background: #cbd5e1; }
+
+        /* Detail List Design for Viewing Node Specs */
+        .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #e2e8f0; font-size: 14px; align-items: center; }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-row strong { color: #475569; }
+        .detail-row span { font-weight: 500; color: #1e293b; }
+
+        /* Modal Overlay Screens */
+        .modal-overlay { display: none; position: fixed; top:0; left:0; width:100vw; height:100vh; background: rgba(15, 23, 42, 0.6); align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
+        .modal-box { background: white; border-radius: 12px; width: 100%; max-width: 550px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); overflow: hidden; animation: slideUp 0.25s ease-out; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e2e8f0; font-weight: bold; font-size: 18px; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
+        .modal-close { cursor: pointer; font-size: 20px; color: #94a3b8; }
+        .modal-close:hover { color: #475569; }
+        .modal-body { padding: 24px; display: flex; flex-direction: column; gap: 16px; max-height: 70vh; overflow-y: auto; }
+        
+        .form-group-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-field { display: flex; flex-direction: column; gap: 6px; }
+        .form-field label { font-size: 13px; font-weight: 600; color: #475569; }
+        .form-field input, .form-field select { padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; width: 100%; }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px; background: #f8fafc; }
+        .cancel-btn { padding: 10px 18px; background: #e2e8f0; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; color: #475569; }
+        .save-btn { padding: 10px 18px; background: #3b82f6; border: none; border-radius: 6px; font-weight: 600; color: white; cursor: pointer; }
+        .save-btn:hover { background: #2563eb; }
+
+        /* Quotation Workspace Layout */
+        .quote-workspace { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; height: 100%; }
+        .quote-left-panel { background: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 24px; display: flex; flex-direction: column; }
+        .quote-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+        .quote-field-box { display: flex; flex-direction: column; gap: 6px; }
+        .quote-field-box label { font-size: 12px; font-weight: bold; color: #64748b; }
+        .quote-field-box input { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; width: 100%; }
+        
+        .quote-right-panel { display: flex; flex-direction: column; gap: 20px; }
+        .calc-card { background: white; border-radius: 8px; border: 1px solid #e2e8f0; padding: 20px; }
+        .calc-card h3 { font-size: 16px; margin-bottom: 14px; color: #334155; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
+        .calc-inputs { display: flex; flex-direction: column; gap: 12px; }
+        .total-display { font-size: 24px; font-weight: bold; color: #1e293b; text-align: center; margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 6px; border: 1px dashed #cbd5e1; }
+
+        /* Inline CRUD Layout Buttons */
+        .crud-actions { display: flex; gap: 6px; }
+        .edit-btn { padding: 4px 8px; background-color: #0ea5e9; border: none; border-radius: 4px; color: white; cursor: pointer; font-size: 12px; }
+        .edit-btn:hover { background-color: #0284c7; }
+        .delete-btn { padding: 4px 8px; background-color: #ef4444; border: none; border-radius: 4px; color: white; cursor: pointer; font-size: 12px; }
+        .delete-btn:hover { background-color: #dc2626; }
+        
+        /* Tab Options Style */
+        .tab-bar { display: flex; border-bottom: 1px solid #e2e8f0; margin-bottom: 10px; background: #f8fafc; }
+        .tab-item { padding: 12px 20px; cursor: pointer; font-weight: 600; color: #64748b; border-bottom: 2px solid transparent; font-size: 14px; }
+        .tab-item.active-tab { color: #3b82f6; border-bottom-color: #3b82f6; background: white; }
+
+        /* Dashboard Grid Layout ADDED */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        /* MOBILE MENU TOGGLE SYSTEM */
+        .mobile-header { display: none; background-color: #1e293b; color: white; padding: 12px 20px; justify-content: space-between; align-items: center; z-index: 99; width: 100%; }
+        .hamburger-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; }
+
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* MOBILE RESPONSIVE ADAPTABILITY SHEET */
+        @media (max-width: 768px) {
+            #appContent { flex-direction: column; }
+            
+            /* Toggle visibility of standard desktop layout constraints */
+            .sidebar {
+                position: fixed;
+                top: 50px; /* Right beneath mobile header */
+                left: 0;
+                height: calc(100vh - 50px);
+                z-index: 150;
+                transform: translateX(-100%);
+                width: 260px;
+                box-shadow: 4px 0 10px rgba(0,0,0,0.1);
+            }
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            .mobile-header {
+                display: flex;
+                height: 50px;
+            }
+            .top-navbar {
+                padding: 10px 15px;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                justify-content: flex-start;
+                flex-wrap: nowrap;
+                max-width: 100vw;
+            }
+            .page-container {
+                padding: 15px;
+            }
+            .quote-workspace {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            .quote-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .form-group-row {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            .table-controls {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .table-controls div {
+                display: flex;
+                width: 100%;
+                justify-content: space-between;
+            }
+            .action-btn, .filter-btn {
+                flex: 1;
+                text-align: center;
+                font-size: 13px;
+                padding: 10px;
+            }
+            /* Make Dashboard Grid Stack on Mobile */
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .quote-grid {
+                grid-template-columns: 1fr;
+            }
+            .login-card {
+                padding: 24px 16px;
+                margin: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- MOBILE NAVIGATION PORTAL STRIP -->
+    <div class="mobile-header">
+        <button class="hamburger-btn" onclick="toggleMobileSidebar(event)">☰</button>
+        <div style="font-weight: bold; font-size: 15px;">Blessed Works Portal</div>
+        <div style="width: 24px;"></div> <!-- visual balance space -->
+    </div>
+
+    <!-- SECTION 1: SYSTEM SECURE GATEWAY OVERLAY -->
+    <div id="loginPage">
+        <div class="login-card">
+            <h2>BWLS Cloud Portal</h2>
+            <div id="loginError">Invalid credentials. Please try again.</div>
+            <input type="text" id="loginUsername" placeholder="Username" autofocus>
+            <div style="position: relative; width: 100%;">
+                <input type="password" id="loginPassword" placeholder="Password" style="padding-right: 40px;">
+                <span onclick="togglePasswordVisibility(event)" style="position: absolute; right: 12px; top: 12px; cursor: pointer; color: #64748b; font-size: 18px; user-select: none;">👁️</span>
+            </div>
+            <button onclick="handleLogin()">Login Securely</button>
+        </div>
+    </div>
+
+    <!-- SECTION 2: SYSTEM MAIN FRAMEWORK WRAPPER -->
+    <div id="appContent">
+        
+        <!-- Sidebar Navigation -->
+        <div class="sidebar" id="appSidebar">
+            <div>
+                <div class="sidebar-brand">🌐 Blessed Works Logistic and Services</div>
+                <ul class="sidebar-menu">
+                    <li onclick="mobileNavRedirect('dashboardPage')">📊 Dashboard Overview</li>
+                    <li onclick="mobileNavRedirect('ratesPage')">🚢 Freight Rates Engine</li>
+                    <li onclick="mobileNavRedirect('quotationsPage')">💰 Quotation Sheet Calc</li>
+                </ul>
+            </div>
+            <div class="sidebar-footer">
+                <div id="sidebarUser">👤 Guest Account</div>
+                <button class="logout-btn" onclick="handleLogout()">System Sign Out</button>
+            </div>
+        </div>
+
+        <!-- Main View Space (Top bar + Active Workspace) -->
+        <div class="main-view">
+            <!-- TOP BAR: Hidden by default and only displays when active page is ratesPage -->
+            <div class="top-navbar" id="topNavbar" style="display: none;">
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn" id="workflowBtn" onclick="toggleDropdown('workflowDropdown', event)">📦 Workflow ▾</button>
+                    <ul class="dropdown-menu" id="workflowDropdown">
+                        <li onclick="selectWorkflow('')">🔄 All Workflows</li>
+                        <li onclick="selectWorkflow('Export')">📦 Export Mode</li>
+                        <li onclick="selectWorkflow('Import')">📥 Import Mode</li>
+                        <li onclick="selectWorkflow('Local')">🏠 Local Transport</li>
+                    </ul>
+                </div>
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn" id="reeferBtn" onclick="toggleDropdown('reeferDropdown', event)">📦 Dry Van ▾</button>
+                    <ul class="dropdown-menu" id="reeferDropdown">
+                        <li onclick="selectEquipment('')">🔄 All Equipment</li>
+                        <li onclick="selectEquipment('Dry Van')">📦 Dry Van Cargo</li>
+                        <li onclick="selectEquipment('Reefer')">❄️ Reefer Unit</li>
+                    </ul>
+                </div>
+                
+                <!-- ADD TRANSPORT DROPDOWN BUTTON -->
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn" id="addTransportBtn" onclick="toggleDropdown('addTransportDropdown', event)">🚚 add transport ▾</button>
+                    <ul class="dropdown-menu" id="addTransportDropdown">
+                        <li onclick="openAddTransportModal('Local')">🚚 add local transport</li>
+                        <li onclick="openAddTransportModal('Import')">📥 add Import transport</li>
+                        <li onclick="openAddTransportModal('Export')">📦 export transport</li>
+                    </ul>
+                </div>
+
+                <!-- NEW ADD ORIGIN BUTTON -->
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn" onclick="openAddOriginModal()">📍 Add Origin</button>
+                </div>
+
+                <!-- NEW ADD DESTINATION BUTTON -->
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn" id="btnOpenAddDestination" onclick="openAddDestinationModal()">🏁 Add Destination</button>
+                </div>
+
+                <!-- CARRIER LIST FILTER DROPDOWN BUTTON -->
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn" id="carrierBtn" onclick="toggleDropdown('carrierDropdown', event)">🚢 Carrier ▾</button>
+                    <ul class="dropdown-menu" id="carrierDropdown">
+                        <li onclick="listCarriers('Local')">🏠 Local</li>
+                        <li onclick="listCarriers('Import')">📥 Import</li>
+                        <li onclick="listCarriers('Export')">📦 Export</li>
+                    </ul>
+                </div>
+
+                <!-- REFRESH DATA BUTTON -->
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn" style="background:#f0fdf4; border-color:#bbf7d0; color:#16a34a;" onclick="refreshDatabaseData()">🔄 Refresh Data</button>
+                </div>
+
+                <!-- MANAGE SETTINGS BUTTON -->
+                <div class="nav-dropdown">
+                    <button class="nav-dropdown-btn" style="background:#e0f2fe; border-color:#bae6fd; color:#0369a1;" onclick="openManageRegistryModal()">⚙️ Manage Registry</button>
+                </div>
+            </div>
+
+            <div class="page-container">
+                
+                <!-- WORKSPACE A: DASHBOARD WELCOME OVERVIEW -->
+                <div id="dashboardPage" class="page-view" style="display: block;">
+                    <h2 id="dashboardWelcome" style="margin-bottom: 10px;">Welcome!</h2>
+                    <p style="color: #64748b;">Select a workflow tracking matrix item from the sidebar module selector sheet grid to execute database operational actions.</p>
+                    
+                    <!-- ADDED: DASHBOARD GRID FOR NEWS & GRAPH -->
+                    <div class="dashboard-grid">
+                        
+                        <!-- 1. Shipping Lines News Feed -->
+                        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; min-height: 400px;">
+                            <h3 style="margin-bottom: 15px; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; font-size: 16px;">📰 Live Shipping Market Feed</h3>
+                            <div style="overflow-y: auto; flex-grow: 1; padding-right: 8px; display: flex; flex-direction: column; gap: 12px;">
+                                
+                                <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 12px; border-radius: 4px;">
+                                    <strong style="color: #b91c1c; font-size: 12px; text-transform: uppercase;">Critical Alert</strong>
+                                    <p style="font-size: 13px; margin-top: 4px; color: #7f1d1d;">There is no booking available for this month on major Asia-Europe lanes due to severe terminal delays and high volume overflow.</p>
+                                </div>
+
+                                <div style="background: #f0fdf4; border-left: 4px solid #22c55e; padding: 12px; border-radius: 4px;">
+                                    <strong style="color: #15803d; font-size: 12px; text-transform: uppercase;">Rate Indices (July 2026)</strong>
+                                    <p style="font-size: 13px; margin-top: 4px; color: #166534;">Drewry's World Container Index (WCI) rose 2% to reach $4,639 per 40ft container.</p>
+                                </div>
+                                
+                                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px; border-radius: 4px;">
+                                    <strong style="color: #1d4ed8; font-size: 12px; text-transform: uppercase;">Geopolitical Impact</strong>
+                                    <p style="font-size: 13px; margin-top: 4px; color: #1e40af;">Container shipping has less to lose from the Iran conflict compared to other shipping sectors, but it cannot escape disruption and higher costs.</p>
+                                </div>
+
+                                <div style="background: #f8fafc; border-left: 4px solid #64748b; padding: 12px; border-radius: 4px;">
+                                    <strong style="color: #334155; font-size: 12px; text-transform: uppercase;">Intra-Asia Resilience</strong>
+                                    <p style="font-size: 13px; margin-top: 4px; color: #475569;">Drewry expects freight rates to remain stable in coming weeks. The intra-Asia container freight market has remained resilient this year, with the index up 41% YoY.</p>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- 2. Rate Comparison Graph -->
+                        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; min-height: 400px;">
+                            <h3 style="margin-bottom: 15px; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; font-size: 16px;">📈 Monthly Rate Comparison (Ocean vs. Local)</h3>
+                            <div style="flex-grow: 1; position: relative; min-height: 0;">
+                                <canvas id="dashboardRatesChart"></canvas>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- WORKSPACE B: CLOUD FREIGHT RATES ENGINE TABLE VIEW -->
+                <div id="ratesPage" class="page-view">
+                    <div class="table-controls">
+                        <h2>Freight Tracking Target Matrix</h2>
+                        <div>
+                            <button class="filter-btn" onclick="showModal('filterRatesModal')">🔍 Filter Targets</button>
+                            <button class="action-btn" onclick="showModal('addRateModal')">➕ Add Cloud Entry</button>
+                        </div>
+                    </div>
+                    <div class="data-table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr id="tableHeaderRow">
+                                    <!-- Dynamic header injection will go here -->
+                                </tr>
+                            </thead>
+                            <tbody id="ratesTable">
+                                <!-- Loaded dynamically via operational script layer below -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- WORKSPACE C: QUOTATION SHEET CALC -->
+                <div id="quotationsPage" class="page-view">
+                    <div class="quote-workspace">
+                        <div class="quote-left-panel">
+                            <h2 style="margin-bottom: 20px;">Itemized Cargo Valuation Breakdown</h2>
+                            <div class="quote-grid" id="usdInputsContainer">
+                                <!-- Content dynamically populated via setup call routine -->
+                            </div>
+                            <button class="cancel-btn" style="align-self: flex-start;" onclick="clearQuotationSheet()">Reset Ledger Sheet</button>
+                        </div>
+                        <div class="quote-right-panel">
+                            <div class="calc-card">
+                                <h3>PHP Exchange Converter</h3>
+                                <div class="calc-inputs">
+                                    <input type="number" step="any" id="converterPHP" placeholder="Enter Amount in PHP (Press Enter)">
+                                </div>
+                            </div>
+                            <div class="calc-card">
+                                <h3>EUR Exchange Converter</h3>
+                                <div class="calc-inputs">
+                                    <input type="number" step="any" id="converterEUR" placeholder="Enter Amount in EUR (Press Enter)">
+                                </div>
+                            </div>
+                            <div class="calc-card" style="flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                                <h3>Consolidated Balance Summary</h3>
+                                <div class="total-display" id="quoteTotalLabel">Total: $0.00 USD</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL POPUP LAYER 1: DATA MATRIX FILTERS -->
+    <div class="modal-overlay" id="filterRatesModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span>Filter Rates Manifest</span>
+                <span class="modal-close" onclick="closeModal('filterRatesModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group-row">
+                    <div class="form-field"><label>Origin</label><input type="text" id="filterOrigin" placeholder="e.g. Manila"></div>
+                    <div class="form-field"><label>Destination</label><input type="text" id="filterDestination" placeholder="e.g. Tokyo"></div>
+                </div>
+                <div class="form-group-row">
+                    <div class="form-field">
+                        <label>Size Variant</label>
+                        <select id="filterContainerSize">
+                            <option value="">All Standard Sizes</option>
+                            <option value="20STD">20ft Standard</option>
+                            <option value="40STD">40ft Standard</option>
+                            <option value="40HQ">40ft High Cube</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Shipment Type</label>
+                        <select id="filterType">
+                            <option value="">All Classes</option>
+                            <option value="Export">Export</option>
+                            <option value="Import">Import</option>
+                            <option value="Local">Local</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group-row">
+                    <div class="form-field"><label>Max Transit Days</label><input type="number" id="filterTransitTime"></div>
+                </div>
+                <div class="form-group-row">
+                    <div class="form-field"><label>Start Date Window</label><input type="date" id="filterValidityStart"></div>
+                    <div class="form-field"><label>End Date Window</label><input type="date" id="filterValidityEnd"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" onclick="closeModal('filterRatesModal')">Cancel</button>
+                <button class="save-btn" onclick="executeFilterAction()">Apply Search Filters</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL POPUP LAYER 2: ADD RECORD MANIFEST MATRIX ENTRY -->
+    <div class="modal-overlay" id="addRateModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span>Synchronize New Rate Entry</span>
+                <span class="modal-close" onclick="closeModal('addRateModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group-row">
+                    <div class="form-field">
+                        <label>Origin Port Location</label>
+                        <select id="origin">
+                            <option value="" disabled selected>Select Origin</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Destination Target Port</label>
+                        <select id="destination">
+                            <option value="" disabled selected>Select Destination</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group-row">
+                    <div class="form-field">
+                        <label>Container Size Specification</label>
+                        <select id="containerSize">
+                            <option value="20STD">20ft Standard (20STD)</option>
+                            <option value="40STD">40ft Standard (40STD)</option>
+                            <option value="40HQ">40ft High Cube (40HQ)</option>
+                            <option value="Reefer 20STD">Reefer 20ft Standard (Reefer 20STD)</option>
+                            <option value="Reefer 40STD">Reefer 40ft Standard (Reefer 40STD)</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Direction Class</label>
+                        <select id="shipmentType">
+                            <option value="Export">Export Mode</option>
+                            <option value="Import">Import Mode</option>
+                            <option value="Local">Local Mode</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group-row">
+                    <div class="form-field"><label>Transit Duration Days</label><input type="number" id="transitTime" placeholder="e.g. 14"></div>
+                    <div class="form-field"><label>Assigned Operator Editor</label><input type="text" id="addPersonModified" readonly disabled></div>
+                </div>
+                <div class="form-group-row">
+                    <div class="form-field"><label>Validity Effective Start</label><input type="date" id="validityStart"></div>
+                    <div class="form-field"><label>Validity Expiration Target</label><input type="date" id="validityEnd"></div>
+                </div>
+                <hr style="border:0; border-top:1px solid #e2e8f0; margin: 5px 0;">
+                <div class="form-group-row">
+                    <div class="form-field">
+                        <label>Target Core Carrier Line</label>
+                        <select id="carrierSelect">
+                        </select>
+                    </div>
+                    <div class="form-field"><label>Base Direct Quotation Rate Amount</label><input type="number" id="rate" placeholder="0.00"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" onclick="closeModal('addRateModal')">Discard Changes</button>
+                <button class="save-btn" onclick="executeAddRateAction()">Push Database Node</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL POPUP LAYER 3: VIEW RATE DETAIL METADATA SPECIFICATIONS -->
+    <div class="modal-overlay" id="viewRateDetailModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span>Freight Manifest Node Details</span>
+                <span class="modal-close" onclick="closeModal('viewRateDetailModal')">&times;</span>
+            </div>
+            <div class="modal-body" id="detailModalBody">
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" onclick="closeModal('viewRateDetailModal')">Close Window</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL POPUP LAYER 4: ADD TRANSPORT CARRIER -->
+    <div class="modal-overlay" id="addTransportModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span id="transportModalTitle">Add Transport Carrier</span>
+                <span class="modal-close" onclick="closeModal('addTransportModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-field">
+                    <label>Carrier Name</label>
+                    <input type="text" id="transportCarrierName" placeholder="Enter Carrier Name">
+                </div>
+                <div class="form-field">
+                    <label>Carrier Type</label>
+                    <select id="transportCarrierType">
+                        <option value="Domestic">Domestic</option>
+                        <option value="International">International</option>
+                        <option value="Both">Both</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" onclick="closeModal('addTransportModal')">Cancel</button>
+                <button class="save-btn" onclick="saveTransportCarrier()">Save Transport</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL POPUP LAYER 5: LIST CARRIERS DISPLAY -->
+    <div class="modal-overlay" id="listCarriersModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span id="carrierListTitle">Carrier Registry</span>
+                <span class="modal-close" onclick="closeModal('listCarriersModal')">&times;</span>
+            </div>
+            <div class="modal-body" id="carrierListBody" style="max-height: 400px; overflow-y: auto;">
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" onclick="closeModal('listCarriersModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW MODAL POPUP LAYER 6: ADD ORIGIN -->
+    <div class="modal-overlay" id="addOriginModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span>Add Origin Port</span>
+                <span class="modal-close" onclick="closeAccessoryModal('addOriginModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-field">
+                    <label>Origin Port Name</label>
+                    <input type="text" id="originNameInput" placeholder="Enter Origin (e.g. Manila)">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" onclick="closeAccessoryModal('addOriginModal')">Cancel</button>
+                <button class="save-btn" onclick="saveOrigin()">Save Origin</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW MODAL POPUP LAYER 7: ADD DESTINATION -->
+    <div class="modal-overlay" id="addDestinationModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span>Add Destination Port</span>
+                <span class="modal-close" onclick="closeAccessoryModal('addDestinationModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-field">
+                    <label>Destination Port Name</label>
+                    <input type="text" id="destinationNameInput" placeholder="Enter Destination (e.g. Tokyo)">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" onclick="closeAccessoryModal('addDestinationModal')">Cancel</button>
+                <button class="save-btn" onclick="saveDestination()">Save Destination</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW MODAL POPUP LAYER 8: UNIFIED REGISTRY MANAGE SCREEN -->
+    <div class="modal-overlay" id="manageRegistryModal">
+        <div class="modal-box" style="max-width: 650px;">
+            <div class="modal-header">
+                <span>Unified Registry Data Management</span>
+                <span class="modal-close" onclick="closeModal('manageRegistryModal')">&times;</span>
+            </div>
+            <div class="tab-bar">
+                <div class="tab-item active-tab" id="tabOrigin" onclick="switchManageTab('Origin')">Origins</div>
+                <div class="tab-item" id="tabDestination" onclick="switchManageTab('Destination')">Destinations</div>
+                <div class="tab-item" id="tabCarrier" onclick="switchManageTab('Carrier')">Carriers</div>
+            </div>
+            <div class="modal-body" id="manageRegistryListBody" style="max-height: 400px; overflow-y: auto;">
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" onclick="closeModal('manageRegistryModal')">Close Window</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+    <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBZvMKv8jdwJDraN6mEify1gJISsZya270",
+      authDomain: "logistic-app-9bd36.firebaseapp.com",
+      databaseURL: "https://logistic-app-9bd36-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "logistic-app-9bd36",
+      storageBucket: "logistic-app-9bd36.firebasestorage.app",
+      messagingSenderId: "392094145237",
+      appId: "1:392094145237:web:c2347e4146240be082605c",
+      measurementId: "G-XF7R9NYBD0"
+    };
+
+    const app = firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    const usersDatabase = {
+        "may": { password: "blessedworks_may", fullName: "May Merino" },
+        "ivan": { password: "blessedworks_ivan", fullName: "Ivan Paul Casinillo" },
+        "jonas": { password: "blessedworks_jonas", fullName: "Jonas Darantinao" },
+        "jhay_ar": { password: "blessedworks_jhayAr", fullName: "Jhay Ar Ganaden" },
+        "cristal": { password: "blessedworks_cristal", fullName: "Cristal Jane Marata" },
+        "irene": { password: "blessedworks_irene", fullName: "Irene Licong" }
+    };
+
+    let currentLoggedInUser = null;
+    const PHP_TO_USD_RATE = 0.01623;  
+    const EUR_TO_USD_RATE = 1.12;     
+
+    let currentWorkflowFilter = "";
+    let currentEquipmentFilter = "";
+    let activeManageTab = "Origin";
+
+    let localRatesArray = [];
+    let localCarriersArray = [];
+    let localOriginsArray = [];
+    let localDestinationsArray = [];
+
+    const defaultCarriers = [
+        { id: "def_1", carrier_name: "ONE Line", carrier_type: "Both", isDefault: true },
+        { id: "def_2", carrier_name: "Wan Hai", carrier_type: "Both", isDefault: true },
+        { id: "def_3", carrier_name: "Cosco", carrier_type: "Both", isDefault: true },
+        { id: "def_4", carrier_name: "Evergreen", carrier_type: "Both", isDefault: true },
+        { id: "def_5", carrier_name: "SITC", carrier_type: "Both", isDefault: true },
+        { id: "def_6", carrier_name: "CMA CGM", carrier_type: "Both", isDefault: true },
+        { id: "def_7", carrier_name: "PIL", carrier_type: "Both", isDefault: true },
+        { id: "def_8", carrier_name: "MSC", carrier_type: "Both", isDefault: true },
+        { id: "def_9", carrier_name: "MCC Transport", carrier_type: "Both", isDefault: true },
+        { id: "def_10", carrier_name: "Maersk Line", carrier_type: "Both", isDefault: true }
+    ];
+
+    // Mobile Sidebar UI controls
+    function toggleMobileSidebar(event) {
+        event.stopPropagation();
+        const sidebar = document.getElementById("appSidebar");
+        sidebar.classList.toggle("active");
+    }
+
+    function mobileNavRedirect(pageId) {
+        showPage(pageId);
+        document.getElementById("appSidebar").classList.remove("active");
+    }
+
+    // Dismiss sidebar when clicking content space on mobile viewport
+    document.addEventListener("click", function(event) {
+        const sidebar = document.getElementById("appSidebar");
+        const hamburger = document.querySelector(".hamburger-btn");
+        if (sidebar.classList.contains("active") && !sidebar.contains(event.target) && event.target !== hamburger) {
+            sidebar.classList.remove("active");
+        }
+    });
+
+    database.ref('rates').on('value', (snapshot) => {
+        const data = snapshot.val();
+        localRatesArray = [];
+        if (data) {
+            Object.keys(data).forEach(key => {
+                localRatesArray.push({ id: key, ...data[key] });
+            });
+        }
+        applyDropdownFilters();
+    });
+
+    database.ref('carrier/carrier_01').on('value', (snapshot) => {
+        const data = snapshot.val();
+        localCarriersArray = [];
+        if (data) {
+            Object.keys(data).forEach(key => {
+                localCarriersArray.push({ id: key, ...data[key] });
+            });
+        }
+        populateCarrierSelect();
+        applyDropdownFilters();
+        if(document.getElementById('manageRegistryModal').style.display === "flex") {
+            renderManageRegistryList();
+        }
+    });
+
+    database.ref('origin/origin_01').on('value', (snapshot) => {
+        const data = snapshot.val();
+        localOriginsArray = [];
+        if (data) {
+            Object.keys(data).forEach(key => {
+                localOriginsArray.push({ id: key, ...data[key] });
+            });
+        }
+        populateOriginSelect();
+        if(document.getElementById('manageRegistryModal').style.display === "flex") {
+            renderManageRegistryList();
+        }
+    });
+
+    database.ref('destination/destination_01').on('value', (snapshot) => {
+        const data = snapshot.val();
+        localDestinationsArray = [];
+        if (data) {
+            Object.keys(data).forEach(key => {
+                localDestinationsArray.push({ id: key, ...data[key] });
+            });
+        }
+        populateDestinationSelect();
+        if(document.getElementById('manageRegistryModal').style.display === "flex") {
+            renderManageRegistryList();
+        }
+    });
+
+    function togglePasswordVisibility(event) {
+        const passwordInput = document.getElementById("loginPassword");
+        const iconSpan = event.currentTarget;
+        if (passwordInput.type === "password") {
+            passwordInput.type = "text";
+            iconSpan.textContent = "🙈";
+        } else {
+            passwordInput.type = "password";
+            iconSpan.textContent = "👁️";
+        }
+    }
+
+    function handleLogin() {
+        const userInp = document.getElementById("loginUsername").value.trim().toLowerCase();
+        const passInp = document.getElementById("loginPassword").value.trim();
+        const errorMsg = document.getElementById("loginError");
+
+        if (usersDatabase[userInp] && usersDatabase[userInp].password === passInp) {
+            currentLoggedInUser = usersDatabase[userInp];
+            document.getElementById("loginPage").style.display = "none";
+            document.getElementById("appContent").style.display = "flex";
+            document.getElementById("sidebarUser").innerHTML = `👤 ${currentLoggedInUser.fullName}`;
+            document.getElementById("dashboardWelcome").innerHTML = `Welcome, ${currentLoggedInUser.fullName}!`;
+            document.getElementById("addPersonModified").value = currentLoggedInUser.fullName;
+            errorMsg.style.display = "none";
+            document.getElementById("loginUsername").value = "";
+            document.getElementById("loginPassword").value = "";
+            updateTableHeaderLayout("");
+            
+            // Re-render chart explicitly in case of sizing glitches when switching displays
+            setTimeout(() => {
+                window.dispatchEvent(new Event('resize'));
+            }, 100);
+        } else {
+            errorMsg.style.display = "block";
+        }
+    }
+
+    function handleLogout() {
+        currentLoggedInUser = null;
+        document.getElementById("addPersonModified").value = "";
+        clearQuotationSheet();
+        document.getElementById("appContent").style.display = "none";
+        document.getElementById("loginPage").style.display = "flex";
+        showPage('dashboardPage');
+        closeAllModals();
+        closeAllDropdowns();
+    }
+
+    document.getElementById("loginPassword").addEventListener("keyup", function(event) {
+        if (event.key === "Enter") { handleLogin(); }
+    });
+
+    function formatDisplayValue(val) {
+        return val ? val : "-";
+    }
+
+    window.openRateDetailsModal = openRateDetailsModal;
+
+    function selectWorkflow(type) {
+        currentWorkflowFilter = type;
+        const btn = document.getElementById("workflowBtn");
+        let icon = "📦";
+        let displayType = type;
+        if (type === "Import") icon = "📥";
+        else if (type === "Local") icon = "🏠";
+        else if (type === "") {
+            icon = "📦";
+            displayType = "All Workflows";
+        }
+        if (btn) btn.innerHTML = `${icon} ${displayType} ▾`;
+        
+        updateTableHeaderLayout(type);
+        closeAllDropdowns();
+        applyDropdownFilters();
+    }
+
+    function selectEquipment(type) {
+        currentEquipmentFilter = type;
+        const btn = document.getElementById("reeferBtn");
+        let icon = type === "Reefer" ? "❄️" : "📦";
+        let displayType = type === "" ? "All Equipment" : type;
+        if (btn) btn.innerHTML = `${icon} ${displayType} ▾`;
+        closeAllDropdowns();
+        applyDropdownFilters();
+    }
+
+    function getActiveCarriers() {
+        const combined = [...defaultCarriers];
+
+        if (currentWorkflowFilter === "Local") {
+            localCarriersArray.forEach(c => {
+                if ((c.created_mode === "Local" || c.carrier_type === "Domestic" || c.carrier_type === "Both") && 
+                    !combined.some(existing => existing.carrier_name.toLowerCase() === c.carrier_name.toLowerCase())) {
+                    combined.push(c);
+                }
+            });
+        } else if (currentWorkflowFilter === "Import" || currentWorkflowFilter === "Export") {
+            localCarriersArray.forEach(c => {
+                if ((c.created_mode === currentWorkflowFilter || c.carrier_type === "International" || c.carrier_type === "Both") && 
+                    !combined.some(existing => existing.carrier_name.toLowerCase() === c.carrier_name.toLowerCase())) {
+                    combined.push(c);
+                }
+            });
+        } else {
+            localCarriersArray.forEach(c => {
+                if (!combined.some(existing => existing.carrier_name.toLowerCase() === c.carrier_name.toLowerCase())) {
+                    combined.push(c);
+                }
+            });
+        }
+        return combined;
+    }
+
+    function applyDropdownFilters() {
+        let filteredResults = [...localRatesArray];
+
+        if (currentWorkflowFilter) {
+            filteredResults = filteredResults.filter(item => item.shipment_type === currentWorkflowFilter);
+        }
+
+        if (currentEquipmentFilter) {
+            filteredResults = filteredResults.filter(item => {
+                const sizeLower = item.container_size ? item.container_size.toLowerCase() : "";
+                if (currentEquipmentFilter === "Reefer") {
+                    return sizeLower.includes("reefer");
+                } else {
+                    return !sizeLower.includes("reefer");
+                }
+            });
+        }
+
+        renderRates(filteredResults);
+    }
+
+    function updateTableHeaderLayout(workflowType) {
+        const headerRow = document.getElementById("tableHeaderRow");
+        if (!headerRow) return;
+        
+        let htmlContent = `<th>Destination Pod</th>`;
+        const carriersToRender = getActiveCarriers();
+        
+        carriersToRender.forEach(c => {
+            htmlContent += `
+                <th>
+                    <div style="text-align: center; margin-bottom: 4px;">${c.carrier_name}</div>
+                    <div class="rate-split" style="font-size: 11px; font-weight: normal; color: #64748b;">
+                        <span>20' Rate</span><span>40' Rate</span>
+                    </div>
+                </th>
+            `;
+        });
+        
+        headerRow.innerHTML = htmlContent;
+    }
+
+    function showPage(pageId) {
+        document.getElementById("dashboardPage").style.display = "none";
+        document.getElementById("ratesPage").style.display = "none";
+        document.getElementById("quotationsPage").style.display = "none";
+        document.getElementById(pageId).style.display = "block";
+        
+        const topNavbar = document.getElementById("topNavbar");
+        if (topNavbar) {
+            if (pageId === 'ratesPage') {
+                topNavbar.style.display = "flex";
+            } else {
+                topNavbar.style.display = "none";
+            }
+        }
+        
+        if (pageId === 'dashboardPage') {
+            setTimeout(() => {
+                window.dispatchEvent(new Event('resize'));
+            }, 100);
+        }
+        
+        closeAllModals();
+        closeAllDropdowns();
+    }
+
+    function showModal(id) {
+        document.getElementById(id).style.display = "flex";
+        if (id === 'addRateModal' && currentLoggedInUser) {
+            document.getElementById("addPersonModified").value = currentLoggedInUser.fullName;
+        }
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).style.display = "none";
+    }
+
+    function closeAccessoryModal(id) {
+        document.getElementById(id).style.display = "none";
+    }
+
+    function closeAllModals() {
+        document.getElementById('filterRatesModal').style.display = "none";
+        document.getElementById('addRateModal').style.display = "none";
+        document.getElementById('viewRateDetailModal').style.display = "none";
+        document.getElementById('addTransportModal').style.display = "none";
+        document.getElementById('listCarriersModal').style.display = "none";
+        document.getElementById('addOriginModal').style.display = "none";
+        document.getElementById('addDestinationModal').style.display = "none";
+        document.getElementById('manageRegistryModal').style.display = "none";
+    }
+
+    function toggleDropdown(id, event) {
+        event.stopPropagation(); 
+        const targetMenu = document.getElementById(id);
+        const isAlreadyOpen = targetMenu.classList.contains('show-menu');
+        closeAllDropdowns();
+        if (!isAlreadyOpen) {
+            targetMenu.classList.add('show-menu');
+        }
+    }
+
+    function closeAllDropdowns() {
+        document.getElementById('workflowDropdown').classList.remove('show-menu');
+        document.getElementById('reeferDropdown').classList.remove('show-menu');
+        document.getElementById('addTransportDropdown').classList.remove('show-menu');
+        document.getElementById('carrierDropdown').classList.remove('show-menu');
+    }
+
+    window.onclick = function() {
+        closeAllDropdowns();
+    }
+
+    function clearForm() {
+        document.getElementById("origin").selectedIndex = 0;
+        document.getElementById("destination").selectedIndex = 0;
+        document.getElementById("containerSize").value = "20STD";
+        document.getElementById("shipmentType").value = "Export";
+        document.getElementById("transitTime").value = "";
+        document.getElementById("validityStart").value = "";
+        document.getElementById("validityEnd").value = "";
+        document.getElementById("carrierSelect").selectedIndex = 0;
+        document.getElementById("rate").value = "";
+    }
+
+    let activeTransportMode = "";
+    function openAddTransportModal(mode) {
+        activeTransportMode = mode;
+        document.getElementById("transportModalTitle").innerText = `Add ${mode} Transport Carrier`;
+        document.getElementById("transportCarrierName").value = "";
+        document.getElementById("transportCarrierType").value = mode === "Local" ? "Domestic" : "International";
+        closeAllDropdowns();
+        showModal('addTransportModal');
+    }
+
+    function saveTransportCarrier() {
+        const name = document.getElementById("transportCarrierName").value.trim();
+        const type = document.getElementById("transportCarrierType").value;
+
+        if (!name) {
+            alert("Please provide a valid carrier name.");
+            return;
+        }
+
+        const transportPayload = {
+            carrier_name: name,
+            carrier_type: type,
+            created_mode: activeTransportMode 
+        };
+
+        database.ref('carrier/carrier_01').push(transportPayload)
+        .then(() => {
+            closeModal('addTransportModal');
+            alert("Transport Carrier added successfully!");
+        })
+        .catch((error) => {
+            console.error("Firebase Transport write error: ", error);
+        });
+    }
+
+    function openAddOriginModal() {
+        document.getElementById("originNameInput").value = "";
+        showModal('addOriginModal');
+        setTimeout(() => {
+            document.getElementById("originNameInput").focus();
+        }, 100);
+    }
+
+    function saveOrigin() {
+        const name = document.getElementById("originNameInput").value.trim();
+        if (!name) {
+            alert("Please enter a valid origin port name.");
+            return;
+        }
+        database.ref('origin/origin_01').push({ origin_name: name })
+        .then(() => {
+            closeAccessoryModal('addOriginModal');
+        })
+        .catch(err => console.error(err));
+    }
+
+    function openAddDestinationModal() {
+        document.getElementById("destinationNameInput").value = "";
+        showModal('addDestinationModal');
+        setTimeout(() => {
+            document.getElementById("destinationNameInput").focus();
+        }, 100);
+    }
+
+    function saveDestination() {
+        const name = document.getElementById("destinationNameInput").value.trim();
+        if (!name) {
+            alert("Please enter a valid destination port name.");
+            return;
+        }
+        database.ref('destination/destination_01').push({ port_name: name })
+        .then(() => {
+            closeAccessoryModal('addDestinationModal');
+        })
+        .catch(err => console.error(err));
+    }
+
+    function populateOriginSelect() {
+        const originSelect = document.getElementById("origin");
+        originSelect.innerHTML = `<option value="" disabled selected>Select Origin</option>`;
+        localOriginsArray.forEach(o => {
+            originSelect.innerHTML += `<option value="${o.origin_name}">${o.origin_name}</option>`;
+        });
+    }
+
+    function populateDestinationSelect() {
+        const destinationSelect = document.getElementById("destination");
+        destinationSelect.innerHTML = `<option value="" disabled selected>Select Destination</option>`;
+        localDestinationsArray.forEach(d => {
+            destinationSelect.innerHTML += `<option value="${d.port_name}">${d.port_name}</option>`;
+        });
+    }
+
+    function populateCarrierSelect() {
+        const carrierSelect = document.getElementById("carrierSelect");
+        if (!carrierSelect) return;
+        carrierSelect.innerHTML = "";
+        
+        const combinedCarriers = [...defaultCarriers, ...localCarriersArray];
+        
+        combinedCarriers.forEach(c => {
+            carrierSelect.innerHTML += `<option value="${c.carrier_name.toLowerCase().replace(/\s+/g, '')}">${c.carrier_name}</option>`;
+        });
+    }
+
+    function listCarriers(category) {
+        closeAllDropdowns();
+        const modalTitle = document.getElementById("carrierListTitle");
+        const listBody = document.getElementById("carrierListBody");
+
+        modalTitle.innerText = `${category} Carrier Registry`;
+        listBody.innerHTML = "";
+
+        let isDomesticFilter = category === "Local";
+        let isInternationalFilter = category === "Import" || category === "Export";
+
+        const filteredDefaults = defaultCarriers.filter(c => {
+            if (c.carrier_type === "Both") return true;
+            if (isDomesticFilter && c.carrier_type === "Domestic") return true;
+            if (isInternationalFilter && c.carrier_type === "International") return true;
+            return false;
+        });
+
+        const filteredCustoms = localCarriersArray.filter(c => {
+            if (c.created_mode === category) return true;
+            if (c.carrier_type === "Both") return true;
+            if (isDomesticFilter && c.carrier_type === "Domestic") return true;
+            if (isInternationalFilter && c.carrier_type === "International") return true;
+            return false;
+        });
+
+        const fullDisplayList = [...filteredDefaults, ...filteredCustoms];
+
+        if (fullDisplayList.length === 0) {
+            listBody.innerHTML = `<p style="color:#64748b; text-align:center;">No carriers configured under this class.</p>`;
+        } else {
+            fullDisplayList.forEach(c => {
+                listBody.innerHTML += `
+                    <div class="detail-row">
+                        <strong>${c.carrier_name}</strong>
+                        <span style="font-size:12px; background:#e2e8f0; padding:2px 8px; border-radius:12px;">Type: ${c.carrier_type}</span>
+                    </div>
+                `;
+            });
+        }
+
+        showModal('listCarriersModal');
+    }
+
+    function openManageRegistryModal() {
+        closeAllDropdowns();
+        switchManageTab('Origin');
+        showModal('manageRegistryModal');
+    }
+
+    function switchManageTab(tabName) {
+        activeManageTab = tabName;
+        document.getElementById("tabOrigin").classList.remove("active-tab");
+        document.getElementById("tabDestination").classList.remove("active-tab");
+        document.getElementById("tabCarrier").classList.remove("active-tab");
+
+        document.getElementById(`tab${tabName}`).classList.add("active-tab");
+        renderManageRegistryList();
+    }
+
+    function renderManageRegistryList() {
+        const body = document.getElementById("manageRegistryListBody");
+        body.innerHTML = "";
+
+        if (activeManageTab === "Origin") {
+            if (localOriginsArray.length === 0) {
+                body.innerHTML = `<p style="color:#888; text-align:center;">No custom origins registered.</p>`;
+                return;
+            }
+            localOriginsArray.forEach(item => {
+                body.innerHTML += `
+                    <div class="detail-row">
+                        <span>📍 ${item.origin_name}</span>
+                        <div class="crud-actions">
+                            <button class="edit-btn" onclick="editOriginPrompt('${item.id}', '${item.origin_name}')">Edit</button>
+                            <button class="delete-btn" onclick="deleteOriginConfirm('${item.id}')">Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+        } 
+        else if (activeManageTab === "Destination") {
+            if (localDestinationsArray.length === 0) {
+                body.innerHTML = `<p style="color:#888; text-align:center;">No custom destinations registered.</p>`;
+                return;
+            }
+            localDestinationsArray.forEach(item => {
+                body.innerHTML += `
+                    <div class="detail-row">
+                        <span>🏁 ${item.port_name}</span>
+                        <div class="crud-actions">
+                            <button class="edit-btn" onclick="editDestinationPrompt('${item.id}', '${item.port_name}')">Edit</button>
+                            <button class="delete-btn" onclick="deleteDestinationConfirm('${item.id}')">Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+        } 
+        else if (activeManageTab === "Carrier") {
+            const combined = [...defaultCarriers, ...localCarriersArray];
+            
+            combined.forEach(item => {
+                const actionMarkup = item.isDefault 
+                    ? `<span style="font-size:11px; color:#94a3b8; font-style:italic;">System Lock</span>`
+                    : `<div class="crud-actions">
+                        <button class="edit-btn" onclick="editCarrierPrompt('${item.id}', '${item.carrier_name}', '${item.carrier_type}')">Edit</button>
+                        <button class="delete-btn" onclick="deleteCarrierConfirm('${item.id}')">Delete</button>
+                       </div>`;
+                       
+                body.innerHTML += `
+                    <div class="detail-row">
+                        <div>
+                            <strong>🚢 ${item.carrier_name}</strong>
+                            <div style="font-size:11px; color:#64748b;">Type Variant Class: ${item.carrier_type}</div>
+                        </div>
+                        ${actionMarkup}
+                    </div>
+                `;
+            });
+        }
+    }
+
+    function editOriginPrompt(id, currentName) {
+        const newName = prompt("Modify Origin Port Location Name:", currentName);
+        if (newName && newName.trim() !== "") {
+            database.ref(`origin/origin_01/${id}`).update({ origin_name: newName.trim() });
+        }
+    }
+
+    function deleteOriginConfirm(id) {
+        if (confirm("Confirm permanently deleting this custom entry item node?")) {
+            database.ref(`origin/origin_01/${id}`).remove();
+        }
+    }
+
+    function editDestinationPrompt(id, currentName) {
+        const newName = prompt("Modify Destination Target Port Name:", currentName);
+        if (newName && newName.trim() !== "") {
+            database.ref(`destination/destination_01/${id}`).update({ port_name: newName.trim() });
+        }
+    }
+
+    function deleteDestinationConfirm(id) {
+        if (confirm("Confirm permanently deleting this custom entry item node?")) {
+            database.ref(`destination/destination_01/${id}`).remove();
+        }
+    }
+
+    function editCarrierPrompt(id, currentName, currentType) {
+        const newName = prompt("Modify Carrier Name Line:", currentName);
+        if (!newName || newName.trim() === "") return;
+        
+        const newType = prompt("Modify Carrier Type (Domestic / International / Both):", currentType);
+        if (!newType || newType.trim() === "") return;
+
+        database.ref(`carrier/carrier_01/${id}`).update({
+            carrier_name: newName.trim(),
+            carrier_type: newType.trim()
+        });
+    }
+
+    function deleteCarrierConfirm(id) {
+        if (confirm("Confirm dropping carrier registry configuration line entry permanently?")) {
+            database.ref(`carrier/carrier_01/${id}`).remove();
+        }
+    }
+
+    function executeAddRateAction() {
+        const orig = document.getElementById("origin").value;
+        const dest = document.getElementById("destination").value;
+        const size = document.getElementById("containerSize").value;
+        const type = document.getElementById("shipmentType").value;
+        const transit = parseInt(document.getElementById("transitTime").value) || 0;
+        const vStart = document.getElementById("validityStart").value;
+        const vEnd = document.getElementById("validityEnd").value;
+        
+        const carrierSelect = document.getElementById("carrierSelect");
+        const carrierName = carrierSelect.options[carrierSelect.selectedIndex].text;
+        
+        const rateVal = parseFloat(document.getElementById("rate").value) || 0;
+        const operator = document.getElementById("addPersonModified").value;
+
+        if (!orig || !dest) {
+            alert("Please select both origin and destination ports.");
+            return;
+        }
+        if (!vStart || !vEnd) {
+            alert("Please input both start and end validity dates.");
+            return;
+        }
+
+        const payload = {
+            origin: orig,                                  
+            destination_name: dest,                        
+            container_size: size,                          
+            shipment_type: type,                           
+            transit_time: transit,                         
+            person_modified: operator || "System Agent",   
+            valid_from: vStart,                            
+            valid_to: vEnd,                                
+            carrier_name: carrierName,                     
+            freight_rate: rateVal                          
+        };
+
+        database.ref('rates').push(payload)
+        .then(() => {
+            clearForm();
+            closeModal('addRateModal');
+            alert("Rates Entry synced to cloud Realtime Database successfully!");
+        })
+        .catch((error) => {
+            console.error("Firebase write error: ", error);
+        });
+    }
+
+    function executeFilterAction() {
+        const originVal = document.getElementById("filterOrigin").value.toLowerCase();
+        const destinationVal = document.getElementById("filterDestination").value.toLowerCase();
+        const sizeVal = document.getElementById("filterContainerSize").value;
+        const typeVal = document.getElementById("filterType").value;
+        const maxTransit = parseInt(document.getElementById("filterTransitTime").value) || 0;
+        const filterStart = document.getElementById("filterValidityStart").value;
+        const filterEnd = document.getElementById("filterValidityEnd").value;
+
+        const filtered = localRatesArray.filter(item => {
+            const matchOrig = !originVal || (item.origin && item.origin.toLowerCase() === originVal);
+            const matchDest = !destinationVal || (item.destination_name && item.destination_name.toLowerCase() === destinationVal);
+            const matchSize = !sizeVal || (item.container_size && item.container_size.includes(sizeVal));
+            const matchType = !typeVal || item.shipment_type === typeVal;
+            const matchTransit = !maxTransit || item.transit_time <= maxTransit;
+            
+            let matchDates = true;
+            if (filterStart && item.valid_from) {
+                if (item.valid_from < filterStart) matchDates = false;
+            }
+            if (filterEnd && item.valid_to) {
+                if (item.valid_to > filterEnd) matchDates = false;
+            }
+
+            return matchOrig && matchDest && matchSize && matchType && matchTransit && matchDates;
+        });
+
+        renderRates(filtered);
+        closeModal('filterRatesModal');
+    }
+
+    function openRateDetailsModal(recordId) {
+        const item = localRatesArray.find(r => r.id === recordId);
+        if (!item) return;
+
+        const currencySign = currentWorkflowFilter === "Local" ? "₱" : "$";
+        const body = document.getElementById("detailModalBody");
+        body.innerHTML = `
+            <div class="detail-row"><strong>Origin Port Location:</strong> <span>${formatDisplayValue(item.origin)}</span></div>
+            <div class="detail-row"><strong>Destination Target Port:</strong> <span>${formatDisplayValue(item.destination_name)}</span></div>
+            <div class="detail-row"><strong>Container Size Specification:</strong> <span>${formatDisplayValue(item.container_size)}</span></div>
+            <div class="detail-row"><strong>Direction Class:</strong> <span>${formatDisplayValue(item.shipment_type)} Mode</span></div>
+            <div class="detail-row"><strong>Transit Duration Days:</strong> <span>${item.transit_time ? item.transit_time + ' Days' : '-'}</span></div>
+            <div class="detail-row"><strong>Assigned Operator Editor:</strong> <span>${formatDisplayValue(item.person_modified)}</span></div>
+            <div class="detail-row"><strong>Validity Effective Start:</strong> <span>${formatDisplayValue(item.valid_from)}</span></div>
+            <div class="detail-row"><strong>Validity Expiration Target:</strong> <span>${formatDisplayValue(item.valid_to)}</span></div>
+            <div class="detail-row"><strong>Target Core Carrier Line:</strong> <span>${formatDisplayValue(item.carrier_name)}</span></div>
+            <div class="detail-row"><strong>Base Direct Quotation Rate Amount:</strong> <span style="color: #d11252; font-weight: bold;">${currencySign}${formatDisplayValue(item.freight_rate)}</span></div>
+        `;
+        showModal("viewRateDetailModal");
+    }
+
+    function renderRates(ratesData = localRatesArray) {
+        const table = document.getElementById("ratesTable");
+        if (!table) return;
+        table.innerHTML = "";
+        
+        const cleanRatesData = ratesData.filter(item => {
+            const hasOrigin = item.origin && item.origin !== "-";
+            const hasDestination = item.destination_name && item.destination_name !== "-";
+            return hasOrigin && hasDestination;
+        });
+
+        const activeCarriers = getActiveCarriers();
+
+        if (cleanRatesData.length === 0) {
+            table.innerHTML = `<tr><td colspan="${activeCarriers.length + 1}" style="text-align: center; padding: 20px; color: #888;">No rates found matching criteria.</td></tr>`;
+            return;
+        }
+
+        const groups = {};
+        cleanRatesData.forEach(item => {
+            const isReefer = item.container_size && item.container_size.toLowerCase().includes("reefer") ? "reefer" : "dry";
+            const groupKey = `${item.origin}_${item.destination_name}_${item.valid_from}_${item.valid_to}_${isReefer}_${item.shipment_type}`;
+            
+            if (!groups[groupKey]) {
+                groups[groupKey] = {
+                    origin: item.origin,
+                    destination: item.destination_name,
+                    validityStart: item.valid_from,
+                    validityEnd: item.valid_to,
+                    isReefer: isReefer,
+                    type: item.shipment_type,
+                    records: []
+                };
+            }
+            groups[groupKey].records.push(item);
+        });
+
+        const getNormalisedKey = (name) => {
+            if(!name) return "";
+            return name.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
+        };
+
+        const currencySymbol = currentWorkflowFilter === "Local" ? "₱" : "$";
+
+        Object.values(groups).forEach(group => {
+            const carrierData = {};
+            
+            activeCarriers.forEach(c => {
+                const norm = getNormalisedKey(c.carrier_name);
+                carrierData[norm] = { r20: "-", r40: "-", id20: null, id40: null };
+            });
+
+            group.records.forEach(rec => {
+                if (rec.carrier_name) {
+                    const cKey = getNormalisedKey(rec.carrier_name);
+                    if (carrierData[cKey]) {
+                        const sizeLower = rec.container_size ? rec.container_size.toLowerCase() : "";
+                        const is20 = sizeLower.includes("20");
+                        if (is20) {
+                            carrierData[cKey].r20 = rec.freight_rate;
+                            carrierData[cKey].id20 = rec.id;
+                        } else {
+                            carrierData[cKey].r40 = rec.freight_rate;
+                            carrierData[cKey].id40 = rec.id;
+                        }
+                    }
+                }
+            });
+
+            function getSplitRateMarkup(cKey) {
+                const data = carrierData[cKey];
+                if (!data) return `<div class="rate-split"><span>-</span><span>-</span></div>`;
+                const leftContent = data.r20 !== "-" 
+                    ? `${currencySymbol}${data.r20} <span class="view-details-eye" onclick="openRateDetailsModal('${data.id20}')" title="View 20ft Details">👁️</span>`
+                    : "-";
+                const rightContent = data.r40 !== "-" 
+                    ? `${currencySymbol}${data.r40} <span class="view-details-eye" onclick="openRateDetailsModal('${data.id40}')" title="View 40ft Details">👁️</span>`
+                    : "-";
+                return `<div class="rate-split"><span>${leftContent}</span><span>${rightContent}</span></div>`;
+            }
+
+            let rowHtml = `
+            <tr>
+                <td>
+                    <div class="dest-cell-wrapper">
+                        <div>
+                            <strong>${formatDisplayValue(group.destination)}</strong>
+                            <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                                Validity: ${formatDisplayValue(group.validityStart)} to ${formatDisplayValue(group.validityEnd)} 
+                                (${group.isReefer === 'reefer' ? '❄️ Reefer' : '📦 Dry'})
+                            </div>
+                        </div>
+                    </div>
+                </td>`;
+
+            activeCarriers.forEach(c => {
+                const normKey = getNormalisedKey(c.carrier_name);
+                rowHtml += `<td>${getSplitRateMarkup(normKey)}</td>`;
+            });
+
+            rowHtml += `</tr>`;
+            table.innerHTML += rowHtml;
+        });
+    }
+
+    function initializeQuotationGrid() {
+        const container = document.getElementById("usdInputsContainer");
+        if (!container) return;
+        container.innerHTML = "";
+        for (let i = 1; i <= 15; i++) {
+            container.innerHTML += `
+                <div class="quote-field-box">
+                    <label>Item ${i} (USD)</label>
+                    <input type="number" step="any" id="usdField_${i}" placeholder="0.00" oninput="calculateQuotationTotal()">
+                </div>
+            `;
+        }
+    }
+
+    function calculateQuotationTotal() {
+        let summation = 0;
+        for (let i = 1; i <= 15; i++) {
+            const val = parseFloat(document.getElementById(`usdField_${i}`).value) || 0;
+            summation += val;
+        }
+        document.getElementById("quoteTotalLabel").innerText = `Total: $${summation.toFixed(2)} USD`;
+    }
+
+    function insertConvertedValue(usdAmount) {
+        let assigned = false;
+        for (let i = 1; i <= 15; i++) {
+            const currentInput = document.getElementById(`usdField_${i}`);
+            if (currentInput.value === "" || parseFloat(currentInput.value) === 0) {
+                currentInput.value = usdAmount.toFixed(2);
+                assigned = true;
+                break;
+            }
+        }
+        if (!assigned) {
+            const lastInput = document.getElementById("usdField_15");
+            const legacyVal = parseFloat(lastInput.value) || 0;
+            lastInput.value = (legacyVal + usdAmount).toFixed(2);
+        }
+        calculateQuotationTotal();
+    }
+
+    document.getElementById("converterPHP").addEventListener("keyup", function(event) {
+        if (event.key === "Enter") {
+            const rawPhp = parseFloat(this.value) || 0;
+            if (rawPhp > 0) {
+                const computedUsd = rawPhp * PHP_TO_USD_RATE;
+                insertConvertedValue(computedUsd);
+                this.value = ""; 
+            }
+        }
+    });
+
+    document.getElementById("converterEUR").addEventListener("keyup", function(event) {
+        if (event.key === "Enter") {
+            const rawEur = parseFloat(this.value) || 0;
+            if (rawEur > 0) {
+                const computedUsd = rawEur * EUR_TO_USD_RATE;
+                insertConvertedValue(computedUsd);
+                this.value = ""; 
+            }
+        }
+    });
+
+    function clearQuotationSheet() {
+        for (let i = 1; i <= 15; i++) {
+            const field = document.getElementById(`usdField_${i}`);
+            if(field) field.value = "";
+        }
+        document.getElementById("converterPHP").value = "";
+        document.getElementById("converterEUR").value = "";
+        document.getElementById("quoteTotalLabel").innerText = "Total: $0.00 USD";
+    }
+
+    function refreshDatabaseData() {
+        database.ref('rates').get().then((snapshot) => {
+            const data = snapshot.val();
+            localRatesArray = [];
+            if (data) {
+                Object.keys(data).forEach(key => {
+                    localRatesArray.push({ id: key, ...data[key] });
+                });
+            }
+            applyDropdownFilters();
+        });
+
+        database.ref('carrier/carrier_01').get().then((snapshot) => {
+            const data = snapshot.val();
+            localCarriersArray = [];
+            if (data) {
+                Object.keys(data).forEach(key => {
+                    localCarriersArray.push({ id: key, ...data[key] });
+                });
+            }
+            populateCarrierSelect();
+            applyDropdownFilters();
+        });
+
+        database.ref('origin/origin_01').get().then((snapshot) => {
+            const data = snapshot.val();
+            localOriginsArray = [];
+            if (data) {
+                Object.keys(data).forEach(key => {
+                    localOriginsArray.push({ id: key, ...data[key] });
+                });
+            }
+            populateOriginSelect();
+        });
+
+        database.ref('destination/destination_01').get().then((snapshot) => {
+            const data = snapshot.val();
+            localDestinationsArray = [];
+            if (data) {
+                Object.keys(data).forEach(key => {
+                    localDestinationsArray.push({ id: key, ...data[key] });
+                });
+            }
+            populateDestinationSelect();
+        });
+    }
+
+    document.getElementById("destinationNameInput").addEventListener("keyup", function(event) {
+        if (event.key === "Enter") {
+            saveDestination();
+        }
+    });
+
+    document.getElementById("originNameInput").addEventListener("keyup", function(event) {
+        if (event.key === "Enter") {
+            saveOrigin();
+        }
+    });
+
+    document.addEventListener("keydown", function(event) {
+        if (document.getElementById("loginPage").style.display !== "none") {
+            return;
+        }
+
+        const focusedTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
+        if (focusedTag === "input" || focusedTag === "select" || focusedTag === "textarea") {
+            return;
+        }
+
+        if (event.key === "a" || event.key === "A") {
+            event.preventDefault();
+            document.getElementById("btnOpenAddDestination").click();
+        }
+    });
+
+    updateTableHeaderLayout("");
+    initializeQuotationGrid();
+
+    // ==========================================
+    // CHART.JS INITIALIZATION FOR DASHBOARD
+    // ==========================================
+    document.addEventListener("DOMContentLoaded", function() {
+        const ctx = document.getElementById('dashboardRatesChart');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [
+                        {
+                            label: 'Shipping Lines Ocean Rates ($)',
+                            data: [3200, 3100, 3400, 3600, 4200, 4500, 4639, 4550, 4400, 4300, 4200, 4100], // Highlighted 4639 in July based on news
+                            borderColor: '#3b82f6', // Blue
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2.5,
+                            pointBackgroundColor: '#3b82f6',
+                            pointHoverRadius: 6,
+                            fill: true,
+                            tension: 0.35
+                        },
+                        {
+                            label: 'Local Transport & Drayage Rates ($)',
+                            data: [500, 520, 510, 540, 580, 600, 620, 610, 630, 640, 650, 660],
+                            borderColor: '#10b981', // Emerald Green
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 2.5,
+                            pointBackgroundColor: '#10b981',
+                            pointHoverRadius: 6,
+                            fill: true,
+                            tension: 0.35
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            position: 'top',
+                            labels: {
+                                font: { size: 12, weight: '500' },
+                                usePointStyle: true,
+                                boxWidth: 8
+                            }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: '#1e293b',
+                            titleFont: { size: 13 },
+                            bodyFont: { size: 12 },
+                            padding: 10
+                        }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            grid: { color: '#f1f5f9' },
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value;
+                                },
+                                color: '#64748b'
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#64748b' }
+                        }
+                    }
+                }
+            });
+        }
+    });
+    </script>
+</body>
+</html>

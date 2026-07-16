@@ -1,0 +1,175 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #eef5ef;
+}
+
+.container {
+    display: flex;
+    min-height: 100vh;
+}
+
+.content {
+    flex: 1;
+    padding: 20px;
+}
+
+.sidebar {
+    width: 280px;
+    background: #1d5c3b;
+    color: white;
+    padding: 20px;
+}
+
+.sidebar h2 {
+    margin-bottom: 30px;
+}
+
+.sidebar ul {
+    list-style: none;
+}
+
+.sidebar li {
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.sidebar li:hover {
+    background: #2f8a58;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    margin-top: 20px;
+    overflow-x: auto;
+}
+
+.top-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}
+
+button {
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    background: #1d5c3b;
+    color: white;
+    cursor: pointer;
+}
+
+.add-rate-btn {
+    width: 180px;
+    margin-top: 0;
+}
+
+.filter-btn {
+    width: 180px;
+    margin-top: 0;
+}
+
+.button-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.button-row button {
+    flex: 1;
+}
+
+.cancel-btn {
+    background: #d9534f;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+th {
+    background: #1d5c3b;
+    color: white;
+}
+
+th,
+td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    text-align: left;
+}
+
+label {
+    display: block;
+    margin-top: 15px;
+    font-weight: bold;
+}
+
+@media (max-width: 768px) {
+
+    .container {
+        flex-direction: column-reverse;
+    }
+
+    .sidebar {
+        width: 100%;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        padding: 10px;
+        z-index: 999;
+    }
+
+    .sidebar ul {
+        display: flex;
+        justify-content: space-around;
+        overflow-x: auto;
+    }
+
+    .sidebar li {
+        margin-bottom: 0;
+        white-space: nowrap;
+        font-size: 14px;
+    }
+
+    .content {
+        padding-bottom: 100px;
+    }
+
+    .top-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .add-rate-btn,
+    .filter-btn {
+        width: 100%;
+    }
+
+    .button-row {
+        flex-direction: column;
+    }
+
+    table {
+        min-width: 1000px;
+    }
+}
