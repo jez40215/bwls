@@ -2,44 +2,59 @@ const express = require("express");
 const { initializeApp, cert } = require("firebase-admin/app");
 const { getDatabase } = require("firebase-admin/database");
 
-// Load the downloaded credential key file
+const app = express();
+
+// Initialize Firebase
 initializeApp({
     credential: cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n")
     }),
-    databaseURL: "https://logistic-app-9bd36-default-rtdb.asia-southeast1.firebasedatabase.app"
+    databaseURL:
+        "https://logistic-app-9bd36-default-rtdb.asia-southeast1.firebasedatabase.app"
 });
 
-// Grab the database instance
+// Get Firebase database
 const db = getDatabase();
 
-// Serves static assets (like style.css) straight from your main root directory
+// Serve static files
 app.use(express.static(__dirname));
 
-// FIXED: Serves index.html straight from your main root directory
+// Home page
 app.get("/", (req, res) => {
     res.sendFile(__dirname + "/index.html");
 });
 
-// API Endpoint for rates
+// API endpoint to get rates
 app.get("/api/rates", async (req, res) => {
     try {
         const ref = db.ref("rates");
+
         ref.once("value", (snapshot) => {
             const data = snapshot.val();
-            const ratesArray = data ? Object.values(data) : [];
+
+            const ratesArray = data
+                ? Object.keys(data).map((key) => ({
+                      id: key,
+                      ...data[key]
+                  }))
+                : [];
+
             res.json(ratesArray);
         });
     } catch (error) {
-        res.status(500).json({ error: "Failed to fetch entries from Firebase Realtime DB" });
+        console.error(error);
+
+        res.status(500).json({
+            error: "Failed to fetch entries from Firebase Realtime Database"
+        });
     }
 });
 
+// Render provides the PORT automatically
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running successfully!`);
-    console.log(`Computer: http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
