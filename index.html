@@ -418,7 +418,7 @@
                                 <h3>PHP Exchange Converter</h3>
                                 <div class="calc-inputs">
                                     <input type="number" step="any" id="converterPHP" placeholder="Enter Amount in PHP (Press Enter)">
-                                </div>
+                                warm</div>
                             </div>
                             <div class="calc-card">
                                 <h3>EUR Exchange Converter</h3>
@@ -666,6 +666,18 @@
             </div>
             <div class="modal-footer">
                 <button class="cancel-btn" onclick="closeModal('manageRegistryModal')">Close Window</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CUSTOM STYLE DIALOG BOX INTEGRATED MATCHING IMAGE SPECIFICATION -->
+    <div class="modal-overlay" id="customConfirmModal" style="display: none; align-items: center; justify-content: center; z-index: 9999; background: rgba(0, 0, 0, 0.4);">
+        <div style="background: white; border-radius: 12px; width: 100%; max-width: 440px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); font-family: 'Segoe UI', Arial, sans-serif;">
+            <div style="font-size: 18px; font-weight: 500; color: #1f1f1f; margin-bottom: 16px;">Deleting Row 😢</div>
+            <div style="font-size: 14.5px; color: #1f1f1f; line-height: 1.5; margin-bottom: 24px;">Are you sure you want to permanently delete this entire row of rates?</div>
+            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                <button id="confirmOkBtn" style="background: #1f1e1d; color: white; border: none; padding: 8px 18px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; min-width: 60px;">OK</button>
+                <button id="confirmCancelBtn" style="background: white; color: #1f1f1f; border: 1px solid #e0e0e0; padding: 8px 18px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; min-width: 75px;">Cancel</button>
             </div>
         </div>
     </div>
@@ -1014,6 +1026,41 @@
             targetMenu.classList.add('show-menu');
         }
     }
+
+    // UPDATED FUNCTION: Replaced traditional window.confirm layout with perfectly synchronized image styled custom confirmation workflow
+    window.deleteHorizontalRow = function(idsString) {
+        if (!idsString) return;
+        
+        const confirmModal = document.getElementById("customConfirmModal");
+        const okBtn = document.getElementById("confirmOkBtn");
+        const cancelBtn = document.getElementById("confirmCancelBtn");
+        
+        confirmModal.style.display = "flex";
+        
+        const cleanupListeners = () => {
+            okBtn.onclick = null;
+            cancelBtn.onclick = null;
+            confirmModal.style.display = "none";
+        };
+        
+        okBtn.onclick = function() {
+            cleanupListeners();
+            const ids = idsString.split(',');
+            const promises = ids.map(id => database.ref(`rates/${id}`).remove());
+            Promise.all(promises)
+            .then(() => {
+                alert("All rates in this row deleted successfully!");
+            })
+            .catch(err => {
+                console.error("Error deleting rates row: ", err);
+                alert("Failed to delete some rates from the database.");
+            });
+        };
+        
+        cancelBtn.onclick = function() {
+            cleanupListeners();
+        };
+    };
 
     function closeAllDropdowns() {
         document.getElementById('workflowDropdown').classList.remove('show-menu');
@@ -1375,11 +1422,16 @@
             const matchTransit = !maxTransit || item.transit_time <= maxTransit;
             
             let matchDates = true;
-            if (filterStart && item.valid_from) {
-                if (item.valid_from < filterStart) matchDates = false;
-            }
-            if (filterEnd && item.valid_to) {
-                if (item.valid_to > filterEnd) matchDates = false;
+            if (filterStart && filterEnd && item.valid_from && item.valid_to) {
+                // Intersecting dates algorithm: 
+                // A rate overlaps with the search filter if (Rate Start <= Filter End) AND (Rate End >= Filter Start)
+                if (item.valid_from > filterEnd || item.valid_to < filterStart) {
+                    matchDates = false;
+                }
+            } else {
+                // If only one filter date parameter is supplied, fallback to standard thresholds
+                if (filterStart && item.valid_from && item.valid_from < filterStart) matchDates = false;
+                if (filterEnd && item.valid_to && item.valid_to > filterEnd) matchDates = false;
             }
 
             return matchOrig && matchDest && matchSize && matchType && matchTransit && matchDates;
@@ -1573,7 +1625,13 @@
         const groups = {};
         cleanRatesData.forEach(item => {
             const isReefer = item.container_size && item.container_size.toLowerCase().includes("reefer") ? "reefer" : "dry";
-            const groupKey = `${item.origin}_${item.destination_name}_${item.valid_from}_${item.valid_to}_${isReefer}_${item.shipment_type}`;
+            // Normalizing values to build an precise grouping key that respects validity alignment:
+            const normOrigin = (item.origin || "").trim().toLowerCase();
+            const normDestination = (item.destination_name || "").trim().toLowerCase();
+            const validityStart = (item.valid_from || "").trim();
+            const validityEnd = (item.valid_to || "").trim();
+            
+            const groupKey = `${normOrigin}_${normDestination}_${validityStart}_${validityEnd}_${isReefer}_${item.shipment_type}`;
             
             if (!groups[groupKey]) {
                 groups[groupKey] = {
@@ -1593,8 +1651,6 @@
             if(!name) return "";
             return name.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
         };
-
-        const currencySymbol = currentWorkflowFilter === "Local" ? "₱" : "$";
 
         Object.values(groups).forEach(group => {
             const carrierData = {};
@@ -1624,21 +1680,30 @@
             function getSplitRateMarkup(cKey) {
                 const data = carrierData[cKey];
                 if (!data) return `<div class="rate-split"><span>-</span><span>-</span></div>`;
+                
+                // Set currency to peso symbol "₱" only if shipment type is "Local"
+                const itemCurrency = group.type === "Local" ? "₱" : "$";
+
                 const leftContent = data.r20 !== "-" 
-                    ? `${currencySymbol}${data.r20} <span class="view-details-eye" onclick="openRateDetailsModal('${data.id20}')" title="View 20ft Details">👁️</span>`
+                    ? `${itemCurrency}${data.r20} <span class="view-details-eye" onclick="openRateDetailsModal('${data.id20}')" title="View 20ft Details">👁️</span>`
                     : "-";
                 const rightContent = data.r40 !== "-" 
-                    ? `${currencySymbol}${data.r40} <span class="view-details-eye" onclick="openRateDetailsModal('${data.id40}')" title="View 40ft Details">👁️</span>`
+                    ? `${itemCurrency}${data.r40} <span class="view-details-eye" onclick="openRateDetailsModal('${data.id40}')" title="View 40ft Details">👁️</span>`
                     : "-";
                 return `<div class="rate-split"><span>${leftContent}</span><span>${rightContent}</span></div>`;
             }
+
+            const idsList = group.records.map(r => r.id).join(',');
 
             let rowHtml = `
             <tr>
                 <td>
                     <div class="dest-cell-wrapper">
                         <div>
-                            <strong>${formatDisplayValue(group.destination)}</strong>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <strong>${formatDisplayValue(group.destination)}</strong>
+                                <button class="delete-btn" style="padding: 2px 6px; font-size: 11px; margin-bottom: 2px;" onclick="deleteHorizontalRow('${idsList}')">Delete Row</button>
+                            </div>
                             <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
                                 Validity: ${formatDisplayValue(group.validityStart)} to ${formatDisplayValue(group.validityEnd)} 
                                 (${group.isReefer === 'reefer' ? '❄️ Reefer' : '📦 Dry'})
