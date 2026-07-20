@@ -224,6 +224,47 @@
                 margin: 16px;
             }
         }
+
+        /* Added Styling for dynamic destinations */
+        .destinations-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            grid-column: span 2;
+        }
+        .destination-row-input {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .add-dest-btn {
+            background-color: #f97316;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            transition: background 0.2s;
+            margin-top: 4px;
+            align-self: flex-start;
+        }
+        .add-dest-btn:hover {
+            background-color: #ea580c;
+        }
+        .remove-dest-btn {
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .remove-dest-btn:hover {
+            background-color: #dc2626;
+        }
     </style>
 </head>
 <body>
@@ -386,7 +427,7 @@
                         <h2>Freight Tracking Target Matrix</h2>
                         <div>
                             <button class="filter-btn" onclick="showModal('filterRatesModal')">🔍 Filter Targets</button>
-                            <button class="action-btn" onclick="showModal('addRateModal')">➕ Add Cloud Entry</button>
+                            <button class="action-btn" onclick="openRateCategorySelectionModal()">➕ Add Cloud Entry</button>
                         </div>
                     </div>
                     <div class="data-table-wrapper">
@@ -447,10 +488,28 @@
             </div>
             <div class="modal-body">
                 <div class="form-group-row">
-                    <div class="form-field"><label>Origin</label><input type="text" id="filterOrigin" placeholder="e.g. Manila"></div>
-                    <div class="form-field"><label>Destination</label><input type="text" id="filterDestination" placeholder="e.g. Tokyo"></div>
+                    <div class="form-field">
+                        <label>Rate Category Type</label>
+                        <select id="filterRateCategory">
+                            <option value="">All Categories</option>
+                            <option value="FAK">FAK</option>
+                            <option value="Oil in flexi bag and DG fishmeal">Oil in flexi bag and DG fishmeal</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Origin</label>
+                        <select id="filterOrigin">
+                            <option value="">All Origins</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="form-group-row">
+                    <div class="form-field">
+                        <label>Destination</label>
+                        <select id="filterDestination">
+                            <option value="">All Destinations</option>
+                        </select>
+                    </div>
                     <div class="form-field">
                         <label>Size Variant</label>
                         <select id="filterContainerSize">
@@ -460,6 +519,8 @@
                             <option value="40HQ">40ft High Cube</option>
                         </select>
                     </div>
+                </div>
+                <div class="form-group-row">
                     <div class="form-field">
                         <label>Shipment Type</label>
                         <select id="filterType">
@@ -469,8 +530,6 @@
                             <option value="Local">Local</option>
                         </select>
                     </div>
-                </div>
-                <div class="form-group-row">
                     <div class="form-field"><label>Max Transit Days</label><input type="number" id="filterTransitTime"></div>
                 </div>
                 <div class="form-group-row">
@@ -485,6 +544,24 @@
         </div>
     </div>
 
+    <!-- MODAL POPUP LAYER 1.5: SELECT RATE CATEGORY (FAK vs OIL/DG) -->
+    <div class="modal-overlay" id="selectRateCategoryModal">
+        <div class="modal-box" style="max-width: 420px;">
+            <div class="modal-header">
+                <span>Select Rate Category Type</span>
+                <span class="modal-close" onclick="closeModal('selectRateCategoryModal')">&times;</span>
+            </div>
+            <div class="modal-body" style="text-align: center; gap: 14px;">
+                <p style="font-size: 14px; color: #475569; margin-bottom: 6px;">Please choose the rate category type you wish to create:</p>
+                <button class="save-btn" style="width: 100%; padding: 12px; font-size: 15px;" onclick="proceedToAddRateModal('FAK')">📦 FAK</button>
+                <button class="save-btn" style="width: 100%; padding: 12px; font-size: 15px; background-color: #0d9488;" onclick="proceedToAddRateModal('Oil in flexi bag and DG fishmeal')">🛢️ Oil in flexi bag and DG fishmeal</button>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn" onclick="closeModal('selectRateCategoryModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL POPUP LAYER 2: ADD RECORD MANIFEST MATRIX ENTRY -->
     <div class="modal-overlay" id="addRateModal">
         <div class="modal-box">
@@ -495,18 +572,33 @@
             <div class="modal-body">
                 <div class="form-group-row">
                     <div class="form-field">
+                        <label>Rate Type Category</label>
+                        <select id="rateCategory">
+                            <option value="FAK">FAK</option>
+                            <option value="Oil in flexi bag and DG fishmeal">Oil in flexi bag and DG fishmeal</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
                         <label>Origin Port Location</label>
                         <select id="origin">
                             <option value="" disabled selected>Select Origin</option>
                         </select>
                     </div>
-                    <div class="form-field">
-                        <label>Destination Target Port</label>
-                        <select id="destination">
-                            <option value="" disabled selected>Select Destination</option>
-                        </select>
+                    <div class="form-field" style="display:none;">
+                        <!-- Retained only to prevent potential reference errors elsewhere, but bypassed for UI -->
+                        <select id="destination"><option value=""></option></select>
                     </div>
                 </div>
+
+                <!-- Dynamic Multiple Destinations Area -->
+                <div class="destinations-container">
+                    <label style="font-size: 13px; font-weight: 600; color: #475569;">Destination Target Ports</label>
+                    <div id="dynamicDestinationsList">
+                        <!-- Handled programmatically via appendDestinationInputRow() -->
+                    </div>
+                    <button class="add-dest-btn" onclick="appendDestinationInputRow()">➕ Add Another Destination</button>
+                </div>
+
                 <div class="form-group-row">
                     <div class="form-field">
                         <label>Container Size Specification</label>
@@ -735,11 +827,56 @@
         { id: "def_10", carrier_name: "Maersk Line", carrier_type: "Both", isDefault: true }
     ];
 
+    // Functions to handle rate category modal flow
+    function openRateCategorySelectionModal() {
+        showModal('selectRateCategoryModal');
+    }
+
+    function proceedToAddRateModal(categoryType) {
+        closeModal('selectRateCategoryModal');
+        showModal('addRateModal');
+        const categorySelect = document.getElementById("rateCategory");
+        if (categorySelect) {
+            categorySelect.value = categoryType;
+        }
+    }
+
     // Mobile Sidebar UI controls
     function toggleMobileSidebar(event) {
         event.stopPropagation();
         const sidebar = document.getElementById("appSidebar");
         sidebar.classList.toggle("active");
+    }
+
+    // Dynamic Destinations System Logic added
+    function appendDestinationInputRow() {
+        const container = document.getElementById("dynamicDestinationsList");
+        const rowId = 'dest_row_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+        
+        let selectOptionsHtml = `<option value="" disabled selected>Select Destination</option>`;
+        localDestinationsArray.forEach(d => {
+            selectOptionsHtml += `<option value="${d.port_name}">${d.port_name}</option>`;
+        });
+
+        const rowDiv = document.createElement("div");
+        rowDiv.id = rowId;
+        rowDiv.className = "destination-row-input";
+        rowDiv.style.marginBottom = "8px";
+        
+        rowDiv.innerHTML = `
+            <select class="multiple-destination-select" style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; width: 100%;">
+                ${selectOptionsHtml}
+            </select>
+            <button class="remove-dest-btn" type="button" onclick="removeDestinationInputRow('${rowId}')">✕</button>
+        `;
+        container.appendChild(rowDiv);
+    }
+
+    function removeDestinationInputRow(rowId) {
+        const row = document.getElementById(rowId);
+        if (row) {
+            row.remove();
+        }
     }
 
     function mobileNavRedirect(pageId) {
@@ -791,6 +928,7 @@
             });
         }
         populateOriginSelect();
+        populateFilterOriginSelect();
         if(document.getElementById('manageRegistryModal').style.display === "flex") {
             renderManageRegistryList();
         }
@@ -805,6 +943,7 @@
             });
         }
         populateDestinationSelect();
+        populateFilterDestinationSelect();
         if(document.getElementById('manageRegistryModal').style.display === "flex") {
             renderManageRegistryList();
         }
@@ -993,8 +1132,13 @@
 
     function showModal(id) {
         document.getElementById(id).style.display = "flex";
-        if (id === 'addRateModal' && currentLoggedInUser) {
-            document.getElementById("addPersonModified").value = currentLoggedInUser.fullName;
+        if (id === 'addRateModal') {
+            if (currentLoggedInUser) {
+                document.getElementById("addPersonModified").value = currentLoggedInUser.fullName;
+            }
+            // Setup dynamic destination row system clean values
+            document.getElementById("dynamicDestinationsList").innerHTML = "";
+            appendDestinationInputRow();
         }
     }
 
@@ -1008,6 +1152,7 @@
 
     function closeAllModals() {
         document.getElementById('filterRatesModal').style.display = "none";
+        document.getElementById('selectRateCategoryModal').style.display = "none";
         document.getElementById('addRateModal').style.display = "none";
         document.getElementById('viewRateDetailModal').style.display = "none";
         document.getElementById('addTransportModal').style.display = "none";
@@ -1074,8 +1219,8 @@
     }
 
     function clearForm() {
+        document.getElementById("rateCategory").value = "FAK";
         document.getElementById("origin").selectedIndex = 0;
-        document.getElementById("destination").selectedIndex = 0;
         document.getElementById("containerSize").value = "20STD";
         document.getElementById("shipmentType").value = "Export";
         document.getElementById("transitTime").value = "";
@@ -1083,6 +1228,8 @@
         document.getElementById("validityEnd").value = "";
         document.getElementById("carrierSelect").selectedIndex = 0;
         document.getElementById("rate").value = "";
+        document.getElementById("dynamicDestinationsList").innerHTML = "";
+        appendDestinationInputRow();
     }
 
     let activeTransportMode = "";
@@ -1171,11 +1318,36 @@
     }
 
     function populateDestinationSelect() {
+        // Structural reference wrapper fallback mechanism
         const destinationSelect = document.getElementById("destination");
-        destinationSelect.innerHTML = `<option value="" disabled selected>Select Destination</option>`;
-        localDestinationsArray.forEach(d => {
-            destinationSelect.innerHTML += `<option value="${d.port_name}">${d.port_name}</option>`;
+        if (destinationSelect) {
+            destinationSelect.innerHTML = `<option value="" disabled selected>Select Destination</option>`;
+            localDestinationsArray.forEach(d => {
+                destinationSelect.innerHTML += `<option value="${d.port_name}">${d.port_name}</option>`;
+            });
+        }
+    }
+
+    function populateFilterOriginSelect() {
+        const filterOriginSelect = document.getElementById("filterOrigin");
+        if (!filterOriginSelect) return;
+        const currentVal = filterOriginSelect.value;
+        filterOriginSelect.innerHTML = `<option value="">All Origins</option>`;
+        localOriginsArray.forEach(o => {
+            filterOriginSelect.innerHTML += `<option value="${o.origin_name}">${o.origin_name}</option>`;
         });
+        filterOriginSelect.value = currentVal;
+    }
+
+    function populateFilterDestinationSelect() {
+        const filterDestinationSelect = document.getElementById("filterDestination");
+        if (!filterDestinationSelect) return;
+        const currentVal = filterDestinationSelect.value;
+        filterDestinationSelect.innerHTML = `<option value="">All Destinations</option>`;
+        localDestinationsArray.forEach(d => {
+            filterDestinationSelect.innerHTML += `<option value="${d.port_name}">${d.port_name}</option>`;
+        });
+        filterDestinationSelect.value = currentVal;
     }
 
     function populateCarrierSelect() {
@@ -1259,7 +1431,10 @@
                 body.innerHTML = `<p style="color:#888; text-align:center;">No custom origins registered.</p>`;
                 return;
             }
-            localOriginsArray.forEach(item => {
+            const sortedOrigins = [...localOriginsArray].sort((a, b) => 
+                (a.origin_name || "").localeCompare(b.origin_name || "", undefined, { sensitivity: 'base' })
+            );
+            sortedOrigins.forEach(item => {
                 body.innerHTML += `
                     <div class="detail-row">
                         <span>📍 ${item.origin_name}</span>
@@ -1276,7 +1451,10 @@
                 body.innerHTML = `<p style="color:#888; text-align:center;">No custom destinations registered.</p>`;
                 return;
             }
-            localDestinationsArray.forEach(item => {
+            const sortedDestinations = [...localDestinationsArray].sort((a, b) => 
+                (a.port_name || "").localeCompare(b.port_name || "", undefined, { sensitivity: 'base' })
+            );
+            sortedDestinations.forEach(item => {
                 body.innerHTML += `
                     <div class="detail-row">
                         <span>🏁 ${item.port_name}</span>
@@ -1358,8 +1536,8 @@
     }
 
     function executeAddRateAction() {
+        const rateCategory = document.getElementById("rateCategory").value;
         const orig = document.getElementById("origin").value;
-        const dest = document.getElementById("destination").value;
         const size = document.getElementById("containerSize").value;
         const type = document.getElementById("shipmentType").value;
         const transit = parseInt(document.getElementById("transitTime").value) || 0;
@@ -1372,40 +1550,60 @@
         const rateVal = parseFloat(document.getElementById("rate").value) || 0;
         const operator = document.getElementById("addPersonModified").value;
 
-        if (!orig || !dest) {
-            alert("Please select both origin and destination ports.");
+        if (!orig) {
+            alert("Please select an origin port.");
             return;
         }
+
+        // Loop dynamic UI selectors array list to process many destinations
+        const destinationSelects = document.querySelectorAll(".multiple-destination-select");
+        let targetedDestinations = [];
+        destinationSelects.forEach(sel => {
+            if (sel.value) targetedDestinations.push(sel.value);
+        });
+
+        if (targetedDestinations.length === 0) {
+            alert("Please select at least one destination target port.");
+            return;
+        }
+
         if (!vStart || !vEnd) {
             alert("Please input both start and end validity dates.");
             return;
         }
 
-        const payload = {
-            origin: orig,                                  
-            destination_name: dest,                        
-            container_size: size,                          
-            shipment_type: type,                           
-            transit_time: transit,                         
-            person_modified: operator || "System Agent",   
-            valid_from: vStart,                            
-            valid_to: vEnd,                                
-            carrier_name: carrierName,                     
-            freight_rate: rateVal                          
-        };
+        // Create independent parallel database push nodes configuration schema
+        const databasePromises = targetedDestinations.map(dest => {
+            const payload = {
+                type: rateCategory,
+                rate_category: rateCategory,
+                origin: orig,                                  
+                destination_name: dest,                        
+                container_size: size,                          
+                shipment_type: type,                           
+                transit_time: transit,                         
+                person_modified: operator || "System Agent",   
+                valid_from: vStart,                            
+                valid_to: vEnd,                                
+                carrier_name: carrierName,                     
+                freight_rate: rateVal                          
+            };
+            return database.ref('rates').push(payload);
+        });
 
-        database.ref('rates').push(payload)
+        Promise.all(databasePromises)
         .then(() => {
             clearForm();
             closeModal('addRateModal');
-            alert("Rates Entry synced to cloud Realtime Database successfully!");
+            alert("All Rates Entries synced to cloud Realtime Database successfully!");
         })
         .catch((error) => {
-            console.error("Firebase write error: ", error);
+            console.error("Firebase multi-destination write error: ", error);
         });
     }
 
     function executeFilterAction() {
+        const categoryVal = document.getElementById("filterRateCategory").value;
         const originVal = document.getElementById("filterOrigin").value.toLowerCase();
         const destinationVal = document.getElementById("filterDestination").value.toLowerCase();
         const sizeVal = document.getElementById("filterContainerSize").value;
@@ -1415,6 +1613,8 @@
         const filterEnd = document.getElementById("filterValidityEnd").value;
 
         const filtered = localRatesArray.filter(item => {
+            const itemCategory = item.rate_category || item.type || "FAK";
+            const matchCategory = !categoryVal || itemCategory === categoryVal;
             const matchOrig = !originVal || (item.origin && item.origin.toLowerCase() === originVal);
             const matchDest = !destinationVal || (item.destination_name && item.destination_name.toLowerCase() === destinationVal);
             const matchSize = !sizeVal || (item.container_size && item.container_size.includes(sizeVal));
@@ -1434,7 +1634,7 @@
                 if (filterEnd && item.valid_to && item.valid_to > filterEnd) matchDates = false;
             }
 
-            return matchOrig && matchDest && matchSize && matchType && matchTransit && matchDates;
+            return matchCategory && matchOrig && matchDest && matchSize && matchType && matchTransit && matchDates;
         });
 
         renderRates(filtered);
@@ -1446,6 +1646,9 @@
         if (!item) return;
 
         const body = document.getElementById("detailModalBody");
+
+        // Detect current stored category/type
+        const currentCategory = item.rate_category || item.type || 'FAK';
 
         // Build dynamically populated selections for Origins
         let originOptionsHtml = `<option value="" disabled>Select Origin</option>`;
@@ -1472,15 +1675,22 @@
         body.innerHTML = `
             <div class="form-group-row">
                 <div class="form-field">
+                    <label>Rate Type Category</label>
+                    <select id="editRateCategory">
+                        <option value="FAK" ${currentCategory === 'FAK' ? 'selected' : ''}>FAK</option>
+                        <option value="Oil in flexi bag and DG fishmeal" ${currentCategory === 'Oil in flexi bag and DG fishmeal' ? 'selected' : ''}>Oil in flexi bag and DG fishmeal</option>
+                    </select>
+                </div>
+                <div class="form-field">
                     <label>Origin Port Location</label>
                     <select id="editRateOrigin">${originOptionsHtml}</select>
                 </div>
+            </div>
+            <div class="form-group-row">
                 <div class="form-field">
                     <label>Destination Target Port</label>
                     <select id="editRateDestination">${destOptionsHtml}</select>
                 </div>
-            </div>
-            <div class="form-group-row">
                 <div class="form-field">
                     <label>Container Size Specification</label>
                     <select id="editRateContainerSize">
@@ -1491,6 +1701,8 @@
                         <option value="Reefer 40STD" ${item.container_size === 'Reefer 40STD' ? 'selected' : ''}>Reefer 40ft Standard (Reefer 40STD)</option>
                     </select>
                 </div>
+            </div>
+            <div class="form-group-row">
                 <div class="form-field">
                     <label>Direction Class</label>
                     <select id="editRateShipmentType">
@@ -1499,33 +1711,33 @@
                         <option value="Local" ${item.shipment_type === 'Local' ? 'selected' : ''}>Local Mode</option>
                     </select>
                 </div>
-            </div>
-            <div class="form-group-row">
                 <div class="form-field">
                     <label>Transit Duration Days</label>
                     <input type="number" id="editRateTransitTime" value="${item.transit_time || 0}">
                 </div>
+            </div>
+            <div class="form-group-row">
                 <div class="form-field">
                     <label>Assigned Operator Editor</label>
                     <input type="text" id="editRatePersonModified" value="${formatDisplayValue(item.person_modified)}" readonly disabled>
                 </div>
-            </div>
-            <div class="form-group-row">
                 <div class="form-field">
                     <label>Validity Effective Start</label>
                     <input type="date" id="editRateValidityStart" value="${item.valid_from || ''}">
                 </div>
+            </div>
+            <div class="form-group-row">
                 <div class="form-field">
                     <label>Validity Expiration Target</label>
                     <input type="date" id="editRateValidityEnd" value="${item.valid_to || ''}">
                 </div>
-            </div>
-            <hr style="border:0; border-top:1px solid #e2e8f0; margin: 5px 0;">
-            <div class="form-group-row">
                 <div class="form-field">
                     <label>Target Core Carrier Line</label>
                     <select id="editRateCarrier">${carrierOptionsHtml}</select>
                 </div>
+            </div>
+            <hr style="border:0; border-top:1px solid #e2e8f0; margin: 5px 0;">
+            <div class="form-group-row">
                 <div class="form-field">
                     <label>Base Direct Quotation Rate Amount</label>
                     <input type="number" id="editRatePrice" value="${item.freight_rate || 0}">
@@ -1547,6 +1759,7 @@
     }
 
     function executeEditRateAction(recordId) {
+        const category = document.getElementById("editRateCategory").value;
         const orig = document.getElementById("editRateOrigin").value;
         const dest = document.getElementById("editRateDestination").value;
         const size = document.getElementById("editRateContainerSize").value;
@@ -1569,6 +1782,8 @@
         }
 
         const payload = {
+            type: category,
+            rate_category: category,
             origin: orig,                                  
             destination_name: dest,                        
             container_size: size,                          
@@ -1630,8 +1845,9 @@
             const normDestination = (item.destination_name || "").trim().toLowerCase();
             const validityStart = (item.valid_from || "").trim();
             const validityEnd = (item.valid_to || "").trim();
+            const cat = (item.rate_category || item.type || "FAK").trim();
             
-            const groupKey = `${normOrigin}_${normDestination}_${validityStart}_${validityEnd}_${isReefer}_${item.shipment_type}`;
+            const groupKey = `${normOrigin}_${normDestination}_${validityStart}_${validityEnd}_${isReefer}_${item.shipment_type}_${cat}`;
             
             if (!groups[groupKey]) {
                 groups[groupKey] = {
@@ -1641,6 +1857,7 @@
                     validityEnd: item.valid_to,
                     isReefer: isReefer,
                     type: item.shipment_type,
+                    category: cat,
                     records: []
                 };
             }
@@ -1705,6 +1922,7 @@
                                 <button class="delete-btn" style="padding: 2px 6px; font-size: 11px; margin-bottom: 2px;" onclick="deleteHorizontalRow('${idsList}')">Delete Row</button>
                             </div>
                             <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                                <span style="display: inline-block; background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 4px; font-weight: 600; font-size: 10px; margin-right: 4px;">${group.category}</span>
                                 Validity: ${formatDisplayValue(group.validityStart)} to ${formatDisplayValue(group.validityEnd)} 
                                 (${group.isReefer === 'reefer' ? '❄️ Reefer' : '📦 Dry'})
                             </div>
@@ -1828,6 +2046,7 @@
                 });
             }
             populateOriginSelect();
+            populateFilterOriginSelect();
         });
 
         database.ref('destination/destination_01').get().then((snapshot) => {
@@ -1839,6 +2058,7 @@
                 });
             }
             populateDestinationSelect();
+            populateFilterDestinationSelect();
         });
     }
 
